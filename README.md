@@ -18,6 +18,7 @@ Built with Claude from [nflverse](https://github.com/nflverse) data. For fun, no
   - `refresh.py <pipeline_dir> <season>` downloads nflverse play-by-play and schedules, rebuilds the ratings, and writes `out/dash_<season>/`.
   - `build_site.py <pipeline_dir> <season> <site_dir>` writes the site.
   - `log_week.py <pipeline_dir> <season> <log_dir>` adds this week's entries to the log.
+  - `check_log.py <pipeline_dir> <season> <log_dir> [week]` reports games of a finished week with no Tuesday or pre-kickoff pick in the log.
   - `evaluate.py <pipeline_dir> <log_dir> [season]` prints the scorecard: winners picked vs. Vegas, calibration, home-field bias, quarterback-change games.
   - `pregame.py <pipeline_dir> <season> <log_dir>` re-picks games kicking off in the next 2½ hours with the latest starters and injury report, and logs them.
   - `live_addons.py` holds the next-game adjustments (quarterback change, starters ruled out, rest days). The coefficients are in `out/addons.json`, chosen by `addons.py` + `cv.py` with leave-one-season-out cross-validation. Vegas is never an input.

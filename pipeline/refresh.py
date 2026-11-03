@@ -31,12 +31,15 @@ for y in years:
     if y == season or not os.path.exists(dest):
         fetch(PBP.format(y=y), dest)
 fetch(GAMES, f'{data}/games.csv')
-if '--extra' in sys.argv:  # research inputs: injury reports, snap counts, player id crosswalk
+if '--extra' in sys.argv:  # injury reports, snap counts, player ids (live add-ons) and FTN charting (research)
     REL = 'https://github.com/nflverse/nflverse-data/releases/download'
     for y in years[1:]:
         fetch(f'{REL}/injuries/injuries_{y}.parquet', f'{data}/inj_{y}.parquet')
         fetch(f'{REL}/snap_counts/snap_counts_{y}.parquet', f'{data}/snap_{y}.parquet')
     fetch(f'{REL}/players/players.csv', f'{data}/players.csv')
+    for y in years[1:]:  # FTN charting (2022 on), used by addons.py for research; credit: FTN Data via nflverse
+        if y >= 2022:
+            fetch(f'{REL}/ftn_charting/ftn_charting_{y}.parquet', f'{data}/ftn_{y}.parquet')
 env = dict(os.environ, NFL_DATA=data, NFL_YEARS=','.join(map(str, years)))
 subprocess.run([sys.executable, '-I', f'{work}/build_data.py', data], check=True, env=env, cwd=work, stdout=subprocess.DEVNULL)
 subprocess.run([sys.executable, '-I', f'{work}/weekly.py', f'{work}/out', str(season)], check=True, env=env, cwd=work, stdout=subprocess.DEVNULL)

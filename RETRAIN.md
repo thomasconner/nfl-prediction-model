@@ -45,7 +45,7 @@ All commands run from the repo root unless noted.
    NFL_DATA=data NFL_SEASONS=2022,...,<season> python3 -I addons.py .
    python3 -I cv.py .
    ```
-   This tests quarterback change, injuries, rest, home-field variants, travel, FTN charting luck and CPOE with leave-one-season-out cross-validation. FTN charting must be downloaded as `data/ftn_<year>.parquet` (from the nflverse-data releases, `ftn_charting/ftn_charting_<year>.parquet`). Add new candidates to `addons.py`, and keep Vegas out of the inputs. Update `out/addons.json` from `out/addon_selection.json` if the selection changes.
+   This tests quarterback change, injuries, rest, home-field variants, travel, FTN charting luck and CPOE with leave-one-season-out cross-validation. `--extra` also downloads FTN charting (credit: FTN Data via nflverse). Add new candidates to `addons.py`, and keep Vegas out of the inputs. Update `out/addons.json` from `out/addon_selection.json` if the selection changes.
 6. **Refit what depends on the method.**
    - Luck curve: `python3 -I ledger.py out champion_<season>.json`. This writes `ledger_params.json`.
    - Preseason starting point: `NFL_DATA=data NFL_TUNE=2022,...,<season> python3 -I fit_prior.py`. This writes `prior_params.json` and `proj_backtest.csv`.
@@ -55,3 +55,10 @@ All commands run from the repo root unless noted.
 9. **When Thomas approves.**
    - Replace `pipeline/out/method.json` (and `ledger_params.json`, `prior_params.json` and `proj_backtest.csv` if refit). The model version hash changes automatically.
    - Change the season in the weekly scheduled task to the new one.
+
+## Season rollover (before Week 1)
+
+- **Season number.** Every scheduled task passes the season (`2026`). Update the weekly, Sunday and Monday/Thursday tasks to the new season.
+- **Special kickoff slots.** List the new schedule's non-standard slots from `games.csv`: Thanksgiving, Black Friday, Saturdays, Christmas, international games outside 9:30 AM Sunday, and Week 18 Saturday. Add one-time pre-kickoff tasks about an hour before each.
+- **Preseason starting point.** `weekly.py` uses last season's full-season rating automatically. Re-run `fit_prior.py` only if the retrain changed the method.
+- **Log.** A new `log/<season>/` folder starts automatically. Leave old seasons untouched.
