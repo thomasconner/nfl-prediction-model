@@ -13,7 +13,7 @@ import analysis as A
 from flags import qb_baseline
 
 out_dir, SEASON, WEEK = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-cfg = json.load(open(f'{out_dir}/champion_4yr.json'))
+cfg = json.load(open(f'{out_dir}/method.json'))
 K = json.load(open(f'{out_dir}/ledger_params.json'))['logistic_k']
 NAMES = {'ARI': 'Arizona Cardinals', 'ATL': 'Atlanta Falcons', 'BAL': 'Baltimore Ravens', 'BUF': 'Buffalo Bills',
          'CAR': 'Carolina Panthers', 'CHI': 'Chicago Bears', 'CIN': 'Cincinnati Bengals', 'CLE': 'Cleveland Browns',

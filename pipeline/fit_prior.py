@@ -13,9 +13,10 @@ import numpy as np, pandas as pd
 from scipy.stats import norm
 import model as M
 
-cfg = json.load(open('out/champion_4yr.json'))
+HERE = os.path.dirname(os.path.abspath(__file__))
+cfg = json.load(open(f'{HERE}/out/method.json'))
 _, g = M.load()
-SEASONS = (2022, 2023, 2024, 2025)
+SEASONS = tuple(int(x) for x in os.environ.get('NFL_TUNE', '2022,2023,2024,2025').split(','))
 WEEKS = range(0, 18)
 tg = M.team_games(cfg)
 raw, ngames, prev = {}, {}, {}
@@ -88,7 +89,7 @@ print('week0 rmse', round(rm0, 3), 'b,h,sd', [round(v, 3) for v in p0[0]])
 allrows = rows_for(rho, k, WEEKS)
 _, params = fit_rmse(allrows)
 json.dump(dict(rho=rho, k0=k, taper_weeks=8, by_week={int(w): dict(b=float(b), h=float(h), sd=float(sd)) for w, (b, h, sd) in params.items()}),
-          open('out/prior_params.json', 'w'), indent=1)
+          open(f'{HERE}/out/prior_params.json', 'w'), indent=1)
 
 # back-test projected final wins at each checkpoint vs record pace
 fin = {}
@@ -117,4 +118,4 @@ for w in range(0, 18):
                        mae_eight5=float((total / 2 - f).abs().mean())))
 B = pd.DataFrame(bt).groupby('week')[['mae_model', 'mae_pace', 'mae_eight5']].mean().round(2)
 print(B.to_string())
-B.reset_index().to_csv('out/proj_backtest.csv', index=False)
+B.reset_index().to_csv(f'{HERE}/out/proj_backtest.csv', index=False)

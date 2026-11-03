@@ -7,7 +7,7 @@ import model as M
 import analysis as A
 
 out_dir = sys.argv[1]
-cfg = json.load(open(f'{out_dir}/champion_4yr.json'))
+cfg = json.load(open(f'{out_dir}/method.json'))
 pl = A._all_plays()
 s = M._scrimmage(pl[pl.season_type == 'REG'])
 db = s[s.qb_dropback == 1]

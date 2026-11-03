@@ -19,7 +19,7 @@ import model as M
 
 out_dir, SEASON = sys.argv[1], int(sys.argv[2])
 HERE = os.path.dirname(os.path.abspath(__file__))
-cfg = json.load(open(f'{out_dir}/champion_4yr.json'))
+cfg = json.load(open(f'{out_dir}/method.json'))
 K = json.load(open(f'{out_dir}/ledger_params.json'))['logistic_k']
 PP = json.load(open(f'{out_dir}/prior_params.json'))
 BT = pd.read_csv(f'{out_dir}/proj_backtest.csv').set_index('week')

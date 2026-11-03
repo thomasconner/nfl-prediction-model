@@ -137,13 +137,13 @@
 
   /* layout: phone (one column) → tablet (two) → desktop (twelve-column grid) */
   .rc-layout { display: grid; gap: var(--cds-gap-md); grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "team" "proj" "rank" "games" "picks" "tally" "scatter" "league" "acc" "verdicts" "about"; }
+    grid-template-areas: "team" "proj" "rank" "games" "picks" "tally" "calib" "scatter" "league" "acc" "verdicts" "about"; }
   #team { grid-area: team; } #proj { grid-area: proj; } #rank { grid-area: rank; } #games { grid-area: games; }
   #picks { grid-area: picks; } #tally { grid-area: tally; } #league { grid-area: league; } #acc { grid-area: acc; }
-  #verdicts { grid-area: verdicts; } #about { grid-area: about; } #scatter { grid-area: scatter; }
+  #verdicts { grid-area: verdicts; } #about { grid-area: about; } #scatter { grid-area: scatter; } #calib { grid-area: calib; }
   @container rc (min-width: 700px) {
     .rc-layout { grid-template-columns: repeat(2, minmax(0, 1fr));
-      grid-template-areas: "team team" "proj proj" "rank games" "picks tally" "scatter scatter" "league league" "acc verdicts" "about about"; }
+      grid-template-areas: "team team" "proj proj" "rank games" "picks tally" "scatter scatter" "league league" "calib acc" "verdicts verdicts" "about about"; }
   }
   @container rc (min-width: 1100px) {
     .rc-layout { grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -153,8 +153,8 @@
         "games games games games games games picks picks picks picks picks picks"
         "scatter scatter scatter scatter scatter scatter scatter scatter tally tally tally tally"
         "league league league league league league league league league league league league"
-        "verdicts verdicts verdicts verdicts verdicts verdicts acc acc acc acc acc acc"
-        "about about about about about about about about about about about about"; }
+        "calib calib calib calib calib calib acc acc acc acc acc acc"
+        "verdicts verdicts verdicts verdicts verdicts verdicts about about about about about about"; }
   }
 
   .rc-panel { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
@@ -365,6 +365,13 @@
       </div>
       <div class="rc-chart short" data-draw="tally-chart" data-source="pick_by_week"></div>
       <div class="rc-legend"><span><i style="background: var(--rc-c0)"></i>Model, share right so far</span><span><i style="background: var(--rc-c2)"></i>Vegas favorite</span></div>
+    </section>
+
+    <section class="rc-panel" id="calib">
+      <h2>How honest are the odds?</h2>
+      <p class="rc-note">This season's games, grouped by how confident the model was in its pick. If its odds are honest, each dot sits on the dashed line: picks it called likely won about that often. Groups with only a few games bounce around.</p>
+      <div class="rc-chart short" data-draw="calib-chart" data-source="calibration"></div>
+      <div class="rc-legend"><span><i class="dot" style="background: var(--rc-c0)"></i>Model's picks (bigger dot = more games)</span><span><i style="background: var(--cds-chart-reference)"></i>Perfectly honest odds</span></div>
     </section>
 
     <section class="rc-panel" id="scatter">
@@ -764,6 +771,56 @@
         {color: c2, pts: s.filter((r) => r.v !== null).map((r) => ({x: r.week, y: r.v})), label: (p) => 'Vegas ' + pct0(p.y)},
       ],
       tipLines: (w) => { const r = s.find((q) => q.week === w); return r ? [[c0, 'Model ' + pct0(r.m)], [c2, 'Vegas ' + pct0(r.v)]] : []; },
+    });
+  });
+
+  // ---------- calibration ----------
+  dash.calc('calibration', {
+    inputs: ['games'],
+    title: 'How honest the model’s odds are',
+    description: 'Finished games grouped by the win chance the model gave its pick, against how often those picks won (a tie counts half).',
+    fn: (games) => {
+      const edges = [0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 1.0001];
+      const names = ['50–55%', '55–60%', '60–65%', '65–70%', '70–80%', '80%+'];
+      const done = games.filter((g) => g.status === 'final' && g.model_correct !== null && g.model_correct !== undefined);
+      return names.map((bucket, i) => {
+        const d = done.filter((g) => Number(g.model_pick_prob) >= edges[i] && Number(g.model_pick_prob) < edges[i + 1]);
+        return {bucket, games: d.length,
+          said: d.length ? d.reduce((s, g) => s + Number(g.model_pick_prob), 0) / d.length : null,
+          won: d.length ? d.reduce((s, g) => s + Number(g.model_correct), 0) / d.length : null};
+      }).filter((r) => r.games > 0);
+    },
+  });
+  dash.draw('calib-chart', (el) => {
+    el.replaceChildren();
+    const data = rowsOf('calibration');
+    if (!data.length) return;
+    const {c0} = C();
+    const W = Math.max(280, el.clientWidth), H = 240;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Win chance the model gave its picks against how often they won');
+    const ticks = [0, 0.25, 0.5, 0.75, 1];
+    const m = {t: 10, r: 14, b: 38, l: Math.ceil(measure(svg, ticks.map(pct0))) + 10};
+    const x = d3.scaleLinear([0.5, 1], [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickValues([0.5, 0.6, 0.7, 0.8, 0.9, 1]).tickFormat(pct0).tickSizeOuter(0)).call((g) => styleAxis(g, false));
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues(ticks).tickFormat(pct0).tickSize(-(W - m.l - m.r))).call((g) => styleAxis(g, true));
+    svg.append('text').attr('x', W - m.r).attr('y', H - 4).attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text('Win chance the model gave its pick →');
+    svg.append('line').attr('x1', x(0.5)).attr('y1', y(0.5)).attr('x2', x(1)).attr('y2', y(1)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+    const rr = d3.scaleSqrt([0, d3.max(data, (d) => d.games)], [3, 11]);
+    const tip = d3.select(el).append('div').attr('class', 'rc-tip').style('opacity', 0);
+    data.forEach((d) => {
+      const cx = x(Number(d.said)), cy = y(Number(d.won));
+      svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', rr(d.games)).attr('fill', c0).attr('fill-opacity', 0.85).attr('stroke', 'var(--color-bg)')
+        .on('pointermove', (ev) => {
+          const [px, py] = d3.pointer(ev, el);
+          tip.style('opacity', 1).selectAll('*').remove();
+          tip.append('div').attr('class', 't1').text(d.bucket + ' picks');
+          tip.append('div').text(`Model said ${pct0(Number(d.said))} · won ${pct0(Number(d.won))}`);
+          tip.append('div').text(`${d.games} games`);
+          const tw = tip.node().offsetWidth;
+          tip.style('left', Math.min(Math.max(0, px + 12), el.clientWidth - tw) + 'px').style('top', Math.max(0, py - 56) + 'px');
+        })
+        .on('pointerleave', (ev) => { if (ev.pointerType !== 'touch') tip.style('opacity', 0); });
     });
   });
 
