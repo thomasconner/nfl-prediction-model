@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFL Report Cards</title>
+<meta name="description" content="Is your team actually good, or is its record lying? Every NFL team graded play by play, with weekly projections and picks. Updated every Tuesday.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NFL Report Cards">
+<meta property="og:description" content="Is your team actually good, or is its record lying? Every NFL team graded play by play. Updated every Tuesday.">
+<meta property="og:url" content="__SITE_URL__">
+<meta property="og:image" content="__SITE_URL__og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16171a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%88%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light dark;
+    --font-anthropic-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-anthropic-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --color-fg: #1d1c1a; --color-fg-muted: #6c6a64; --color-bg: #f6f5f1; --color-panel: #ffffff; --color-border-line: #e4e1da;
+    --color-ok: #2f7d3a; --color-warn: #a96400; --color-bad: #c1362b;
+    --cds-font-size-caption: 12.5px; --cds-font-size-body: 15px; --cds-font-size-heading: 17px; --cds-font-size-title: 26px; --cds-font-weight-medium: 600;
+    --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 14px; --cds-gap-lg: 22px; --cds-gap-xl: 30px;
+    --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 18px; --cds-radius: 10px;
+    --cds-chart-grid: #eeebe5; --cds-chart-axis: #c9c5bc; --cds-chart-reference: #8b877e; --cds-chart-muted: #b9b5ac; --cds-chart-status-critical: #c1362b;
+    --cds-surface-popover: #ffffff; --cds-border: #dcd8cf; --cds-shadow-popover: 0 4px 14px rgba(0, 0, 0, .12); --cds-text-secondary: #6c6a64; --cds-dur-slow: .3s;
+    --series-0: #2a6fdb; --series-1: #e0662b; --series-2: #3d9a50; --series-3: #8e5bd0; --series-4: #c8a200; --series-5: #1f9aa0; --series-6: #c94f8a; --series-7: #6f7782;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-fg: #ecebe7; --color-fg-muted: #a3a09a; --color-bg: #16171a; --color-panel: #1f2024; --color-border-line: #33343a;
+      --color-ok: #6cc47a; --color-warn: #e3a24a; --color-bad: #ef7a6e;
+      --cds-chart-grid: #2b2c31; --cds-chart-axis: #4a4b52; --cds-chart-reference: #8e8c86; --cds-chart-muted: #5f6066; --cds-chart-status-critical: #ef7a6e;
+      --cds-surface-popover: #2a2b30; --cds-border: #3d3e45; --cds-shadow-popover: 0 4px 14px rgba(0, 0, 0, .5); --cds-text-secondary: #a3a09a;
+      --series-0: #6ea2f5; --series-1: #f08d5a; --series-2: #6cc47a; --series-3: #b18ae6; --series-4: #e0c34f; --series-5: #56c2c6; --series-6: #e483b2; --series-7: #9aa1ab;
+    }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body); line-height: 1.4; }
+  #dash-root { max-width: 1440px; margin: 0 auto; padding: 16px 16px 8px; box-sizing: border-box; }
+  @media (min-width: 700px) { #dash-root { padding: 24px 24px 8px; } }
+  .site-alert { max-width: 1440px; margin: 16px auto 0; padding: 10px 16px; box-sizing: border-box; color: var(--color-bad); }
+  .site-foot { max-width: 1440px; margin: 0 auto; padding: 8px 16px 32px; box-sizing: border-box; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.5; }
+  @media (min-width: 700px) { .site-foot { padding: 8px 24px 40px; } }
+  .site-foot a { color: inherit; }
+  .dash-skeleton { color: transparent; }
+</style>
+<script src="d3.min.js"></script>
+</head>
+<body>
+<p class="site-alert" hidden>The data didn't load. Refresh the page to try again.</p>
+<div id="dash-root">
+<script>
+/* A small stand-in for the dashboard runtime the page was written for: loads data/*.json,
+   runs the page's calculations and drawings, keeps the picked team in the address (?team=JAX). */
+(function () {
+  const SOURCES = __SOURCES__;
+  const DEFAULT_PARAMS = {team: 'JAX'};
+  const store = {}, calcs = {}, draws = {}, onData = [];
+  let calcCache = {};
+  const fromUrl = () => { const t = new URLSearchParams(location.search).get('team'); return t ? {team: t.toUpperCase()} : {}; };
+  let params = {...DEFAULT_PARAMS, ...fromUrl()};
+  const css = () => getComputedStyle(document.documentElement);
+  const readColors = () => Array.from({length: 8}, (_, i) => css().getPropertyValue('--series-' + i).trim());
+  const dash = {
+    colors: readColors(),
+    data(id) {
+      if (id in store) return {status: 'ok', data: store[id], columns: Object.keys(store[id][0] || {}), meta: []};
+      if (calcs[id]) {
+        const c = calcs[id];
+        if (!c.inputs.every((i) => dash.data(i).status === 'ok')) return {status: 'loading', data: []};
+        if (!(id in calcCache)) calcCache[id] = c.fn(...c.inputs.map((i) => dash.data(i).data));
+        return {status: 'ok', data: calcCache[id], meta: []};
+      }
+      return {status: failed ? 'error' : 'loading', data: []};
+    },
+    calc(id, o) { calcs[id] = o; },
+    loader() {},
+    onData(fn) { onData.push(fn); fn(); },
+    params() { return params; },
+    setParams(p) {
+      params = {...params, ...p};
+      const q = new URLSearchParams(location.search);
+      if (params.team && params.team !== DEFAULT_PARAMS.team) q.set('team', params.team); else q.delete('team');
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+      runAll();
+    },
+    resetParams() { params = {...DEFAULT_PARAMS}; runAll(); },
+    setLink() {}, refresh() {},
+    draw(name, fn) { if (typeof fn === 'function') { draws[name] = fn; } else runOne(name); },
+  };
+  let failed = false;
+  function runOne(name) {
+    document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => {
+      try { draws[name](el); } catch (e) { console.error('draw ' + name, e); }
+    });
+  }
+  function runAll() { onData.forEach((f) => { try { f(); } catch (e) { console.error(e); } }); Object.keys(draws).forEach(runOne); }
+  window.dash = dash;
+  window.__dashStart = function () {
+    runAll();
+    Promise.all(SOURCES.map((n) => fetch('data/' + n + '.json', {cache: 'no-cache'}).then((r) => { if (!r.ok) throw new Error(n + ' ' + r.status); return r.json(); }).then((rows) => { store[n] = Array.isArray(rows) ? rows : (rows.rows || rows.data || []); })))
+      .then(() => {
+        calcCache = {};
+        const cards = store.cards || [];
+        if (params.team && !cards.some((c) => c.team === params.team)) params = {...params, team: DEFAULT_PARAMS.team};
+        runAll();
+      })
+      .catch((e) => { console.error(e); failed = true; document.querySelectorAll('.site-alert').forEach((el) => { el.hidden = false; }); runAll(); });
+    let w = document.getElementById('dash-root').clientWidth, t = null;
+    new ResizeObserver(() => {
+      const nw = document.getElementById('dash-root').clientWidth;
+      if (nw === w) return;
+      w = nw; clearTimeout(t); t = setTimeout(runAll, 120);
+    }).observe(document.getElementById('dash-root'));
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      dash.colors = readColors();
+      document.querySelectorAll('.rc').forEach((el) => dash.colors.slice(0, 3).forEach((c, i) => el.style.setProperty('--rc-c' + i, c)));
+      runAll();
+    });
+  };
+})();
+</script>
+__PAGE__
+</div>
+<footer class="site-foot">
+  Made with Claude from <a href="https://github.com/nflverse">nflverse</a> play-by-play data, schedules and closing Vegas lines. Updated every Tuesday during the regular season. For fun, not betting advice.
+</footer>
+<script>window.__dashStart();</script>
+</body>
+</html>

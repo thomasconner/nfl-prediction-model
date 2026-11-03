@@ -1,0 +1,8 @@
+verdict,teams,win_pct_before,win_pct_after,margin_after,playoff_rate,playoff_wins,titles
+Contender,24,0.729,0.664,5.493,0.875,27,2
+Good but lucky,5,0.75,0.489,0.322,1.0,3,0
+Solid,15,0.652,0.561,3.12,0.6,12,2
+Better than their record,7,0.385,0.528,0.254,0.429,2,0
+Fluff,9,0.69,0.475,-0.795,0.667,2,0
+Middle of the pack,28,0.475,0.531,0.009,0.393,6,0
+Bad,40,0.277,0.355,-4.44,0.025,0,0

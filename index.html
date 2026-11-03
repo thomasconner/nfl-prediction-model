@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFL Report Cards</title>
+<meta name="description" content="Is your team actually good, or is its record lying? Every NFL team graded play by play, with weekly projections and picks. Updated every Tuesday.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NFL Report Cards">
+<meta property="og:description" content="Is your team actually good, or is its record lying? Every NFL team graded play by play. Updated every Tuesday.">
+<meta property="og:url" content="https://thomasconner.github.io/nfl-report-cards/">
+<meta property="og:image" content="https://thomasconner.github.io/nfl-report-cards/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16171a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%88%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light dark;
+    --font-anthropic-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-anthropic-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --color-fg: #1d1c1a; --color-fg-muted: #6c6a64; --color-bg: #f6f5f1; --color-panel: #ffffff; --color-border-line: #e4e1da;
+    --color-ok: #2f7d3a; --color-warn: #a96400; --color-bad: #c1362b;
+    --cds-font-size-caption: 12.5px; --cds-font-size-body: 15px; --cds-font-size-heading: 17px; --cds-font-size-title: 26px; --cds-font-weight-medium: 600;
+    --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 14px; --cds-gap-lg: 22px; --cds-gap-xl: 30px;
+    --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 18px; --cds-radius: 10px;
+    --cds-chart-grid: #eeebe5; --cds-chart-axis: #c9c5bc; --cds-chart-reference: #8b877e; --cds-chart-muted: #b9b5ac; --cds-chart-status-critical: #c1362b;
+    --cds-surface-popover: #ffffff; --cds-border: #dcd8cf; --cds-shadow-popover: 0 4px 14px rgba(0, 0, 0, .12); --cds-text-secondary: #6c6a64; --cds-dur-slow: .3s;
+    --series-0: #2a6fdb; --series-1: #e0662b; --series-2: #3d9a50; --series-3: #8e5bd0; --series-4: #c8a200; --series-5: #1f9aa0; --series-6: #c94f8a; --series-7: #6f7782;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-fg: #ecebe7; --color-fg-muted: #a3a09a; --color-bg: #16171a; --color-panel: #1f2024; --color-border-line: #33343a;
+      --color-ok: #6cc47a; --color-warn: #e3a24a; --color-bad: #ef7a6e;
+      --cds-chart-grid: #2b2c31; --cds-chart-axis: #4a4b52; --cds-chart-reference: #8e8c86; --cds-chart-muted: #5f6066; --cds-chart-status-critical: #ef7a6e;
+      --cds-surface-popover: #2a2b30; --cds-border: #3d3e45; --cds-shadow-popover: 0 4px 14px rgba(0, 0, 0, .5); --cds-text-secondary: #a3a09a;
+      --series-0: #6ea2f5; --series-1: #f08d5a; --series-2: #6cc47a; --series-3: #b18ae6; --series-4: #e0c34f; --series-5: #56c2c6; --series-6: #e483b2; --series-7: #9aa1ab;
+    }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body); line-height: 1.4; }
+  #dash-root { max-width: 1440px; margin: 0 auto; padding: 16px 16px 8px; box-sizing: border-box; }
+  @media (min-width: 700px) { #dash-root { padding: 24px 24px 8px; } }
+  .site-alert { max-width: 1440px; margin: 16px auto 0; padding: 10px 16px; box-sizing: border-box; color: var(--color-bad); }
+  .site-foot { max-width: 1440px; margin: 0 auto; padding: 8px 16px 32px; box-sizing: border-box; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.5; }
+  @media (min-width: 700px) { .site-foot { padding: 8px 24px 40px; } }
+  .site-foot a { color: inherit; }
+  .dash-skeleton { color: transparent; }
+</style>
+<script src="d3.min.js"></script>
+</head>
+<body>
+<p class="site-alert" hidden>The data didn't load. Refresh the page to try again.</p>
+<div id="dash-root">
+<script>
+/* A small stand-in for the dashboard runtime the page was written for: loads data/*.json,
+   runs the page's calculations and drawings, keeps the picked team in the address (?team=JAX). */
+(function () {
+  const SOURCES = ["meta", "weekly", "games", "team_games", "cards", "accuracy", "verdicts"];
+  const DEFAULT_PARAMS = {team: 'JAX'};
+  const store = {}, calcs = {}, draws = {}, onData = [];
+  let calcCache = {};
+  const fromUrl = () => { const t = new URLSearchParams(location.search).get('team'); return t ? {team: t.toUpperCase()} : {}; };
+  let params = {...DEFAULT_PARAMS, ...fromUrl()};
+  const css = () => getComputedStyle(document.documentElement);
+  const readColors = () => Array.from({length: 8}, (_, i) => css().getPropertyValue('--series-' + i).trim());
+  const dash = {
+    colors: readColors(),
+    data(id) {
+      if (id in store) return {status: 'ok', data: store[id], columns: Object.keys(store[id][0] || {}), meta: []};
+      if (calcs[id]) {
+        const c = calcs[id];
+        if (!c.inputs.every((i) => dash.data(i).status === 'ok')) return {status: 'loading', data: []};
+        if (!(id in calcCache)) calcCache[id] = c.fn(...c.inputs.map((i) => dash.data(i).data));
+        return {status: 'ok', data: calcCache[id], meta: []};
+      }
+      return {status: failed ? 'error' : 'loading', data: []};
+    },
+    calc(id, o) { calcs[id] = o; },
+    loader() {},
+    onData(fn) { onData.push(fn); fn(); },
+    params() { return params; },
+    setParams(p) {
+      params = {...params, ...p};
+      const q = new URLSearchParams(location.search);
+      if (params.team && params.team !== DEFAULT_PARAMS.team) q.set('team', params.team); else q.delete('team');
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+      runAll();
+    },
+    resetParams() { params = {...DEFAULT_PARAMS}; runAll(); },
+    setLink() {}, refresh() {},
+    draw(name, fn) { if (typeof fn === 'function') { draws[name] = fn; } else runOne(name); },
+  };
+  let failed = false;
+  function runOne(name) {
+    document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => {
+      try { draws[name](el); } catch (e) { console.error('draw ' + name, e); }
+    });
+  }
+  function runAll() { onData.forEach((f) => { try { f(); } catch (e) { console.error(e); } }); Object.keys(draws).forEach(runOne); }
+  window.dash = dash;
+  window.__dashStart = function () {
+    runAll();
+    Promise.all(SOURCES.map((n) => fetch('data/' + n + '.json', {cache: 'no-cache'}).then((r) => { if (!r.ok) throw new Error(n + ' ' + r.status); return r.json(); }).then((rows) => { store[n] = Array.isArray(rows) ? rows : (rows.rows || rows.data || []); })))
+      .then(() => {
+        calcCache = {};
+        const cards = store.cards || [];
+        if (params.team && !cards.some((c) => c.team === params.team)) params = {...params, team: DEFAULT_PARAMS.team};
+        runAll();
+      })
+      .catch((e) => { console.error(e); failed = true; document.querySelectorAll('.site-alert').forEach((el) => { el.hidden = false; }); runAll(); });
+    let w = document.getElementById('dash-root').clientWidth, t = null;
+    new ResizeObserver(() => {
+      const nw = document.getElementById('dash-root').clientWidth;
+      if (nw === w) return;
+      w = nw; clearTimeout(t); t = setTimeout(runAll, 120);
+    }).observe(document.getElementById('dash-root'));
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      dash.colors = readColors();
+      document.querySelectorAll('.rc').forEach((el) => dash.colors.slice(0, 3).forEach((c, i) => el.style.setProperty('--rc-c' + i, c)));
+      runAll();
+    });
+  };
+})();
+</script>
+<style>
+  .rc { container: rc / inline-size; font-family: var(--font-anthropic-sans); }
+  .rc h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+  .rc h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .rc h3 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: var(--cds-gap-md) 0 var(--cds-gap-xs); }
+  .rc .rc-sub, .rc .rc-note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); margin: var(--cds-gap-xs) 0 0; line-height: 1.45; }
+  .rc .rc-take { margin: var(--cds-gap-sm) 0 0; line-height: 1.5; }
+  .rc .rc-take b, .rc .rc-meta b, .rc .rc-big b { font-weight: 600; }
+  .rc-head { margin-bottom: var(--cds-gap-md); }
+
+  /* layout: phone (one column) → tablet (two) → desktop (twelve-column grid) */
+  .rc-layout { display: grid; gap: var(--cds-gap-md); grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "team" "proj" "rank" "games" "picks" "tally" "scatter" "league" "acc" "verdicts" "about"; }
+  #team { grid-area: team; } #proj { grid-area: proj; } #rank { grid-area: rank; } #games { grid-area: games; }
+  #picks { grid-area: picks; } #tally { grid-area: tally; } #league { grid-area: league; } #acc { grid-area: acc; }
+  #verdicts { grid-area: verdicts; } #about { grid-area: about; } #scatter { grid-area: scatter; }
+  @container rc (min-width: 700px) {
+    .rc-layout { grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-areas: "team team" "proj proj" "rank games" "picks tally" "scatter scatter" "league league" "acc verdicts" "about about"; }
+  }
+  @container rc (min-width: 1100px) {
+    .rc-layout { grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-areas:
+        "team team team team proj proj proj proj proj proj proj proj"
+        "team team team team rank rank rank rank rank rank rank rank"
+        "games games games games games games picks picks picks picks picks picks"
+        "scatter scatter scatter scatter scatter scatter scatter scatter tally tally tally tally"
+        "league league league league league league league league league league league league"
+        "verdicts verdicts verdicts verdicts verdicts verdicts acc acc acc acc acc acc"
+        "about about about about about about about about about about about about"; }
+  }
+
+  .rc-panel { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+  @container rc (max-width: 699px) { .rc-panel { padding: var(--cds-pad-md); } }
+
+  /* team card */
+  .rc-picker { display: flex; align-items: center; gap: var(--cds-gap-sm); flex-wrap: wrap; margin-bottom: var(--cds-gap-md); }
+  .rc-picker label { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .rc-picker select { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); min-height: 2.5rem; border-radius: var(--cds-radius); border: 1px solid var(--color-border-line); background: var(--color-bg); color: var(--color-fg); flex: 1 1 12rem; max-width: 22rem; }
+  .rc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--cds-gap-sm); flex-wrap: wrap; }
+  .rc-name { font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-title); line-height: 1.15; }
+  .rc-verdict { border: 1.5px solid currentColor; border-radius: 999px; padding: var(--cds-pad-xs) var(--cds-pad-md); font-weight: 600; white-space: nowrap; font-size: var(--cds-font-size-caption); }
+  .v-good { color: var(--color-ok); } .v-warn { color: var(--color-warn); } .v-bad { color: var(--color-bad); } .v-mid { color: var(--color-fg-muted); }
+  .rc-meta { color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .rc-meta b { color: var(--color-fg); }
+  .rc-big { display: flex; align-items: baseline; gap: var(--cds-gap-sm); flex-wrap: wrap; margin-top: var(--cds-gap-md); }
+  .rc-big-num { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: calc(var(--cds-font-size-title) * 1.6); line-height: 1; font-variant-numeric: tabular-nums; }
+  .rc-big-label { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.45; }
+  .up { color: var(--color-ok); } .down { color: var(--color-bad); } .flat { color: var(--color-fg-muted); }
+  .rc-tiles { display: grid; gap: var(--cds-gap-sm); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--cds-gap-md); }
+  @container rc (min-width: 700px) { .rc-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  @container rc (min-width: 1100px) { .rc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .rc-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  @container rc (min-width: 700px) { .rc-tile:last-child:nth-child(odd) { grid-column: auto; } }
+  @container rc (min-width: 1100px) { .rc-tile:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+  .rc-tile { border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-sm) var(--cds-pad-md); min-width: 0; }
+  .rc-tile-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .rc-grade { font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-title); line-height: 1.2; }
+  .rc-tile-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .rc-next { margin-top: var(--cds-gap-md); padding: var(--cds-pad-sm) var(--cds-pad-md); border-radius: var(--cds-radius); background: color-mix(in srgb, var(--color-fg) 5%, transparent); font-size: var(--cds-font-size-caption); }
+  .rc-flags { margin: 0; padding-left: 1.1rem; display: grid; gap: var(--cds-gap-xs); font-size: var(--cds-font-size-caption); line-height: 1.45; }
+  .rc details { margin-top: var(--cds-gap-md); }
+  .rc summary { cursor: pointer; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); min-height: 2rem; display: flex; align-items: center; }
+  .rc-cols { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+  .rc dl { display: grid; grid-template-columns: 1fr auto; gap: var(--cds-gap-xs) var(--cds-gap-md); margin: 0; font-size: var(--cds-font-size-caption); }
+  .rc dt { color: var(--color-fg-muted); }
+  .rc dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* charts */
+  .rc-chart { position: relative; min-height: 240px; margin-top: var(--cds-gap-sm); }
+  .rc-chart.short { min-height: 200px; }
+  .rc-chart.tall { min-height: 340px; }
+  @container rc (min-width: 700px) { .rc-chart.tall { min-height: 420px; } }
+  .rc-legend i.dot { width: .6rem; height: .6rem; border-radius: 50%; }
+  .rc-chart svg { display: block; touch-action: pan-y; }
+  .rc-chart svg text { font-family: var(--font-anthropic-sans); }
+  .rc-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+  .rc-tip .t1 { color: var(--cds-text-secondary); }
+  .rc-tip i { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; margin-right: .3rem; }
+  .rc-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); }
+  .rc-legend i { display: inline-block; width: .9rem; height: 2px; margin-right: .35rem; vertical-align: middle; }
+  .rc-legend i.band { height: .6rem; opacity: .25; }
+
+  /* verdict strip */
+  .rc-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr)); gap: 4px; margin-top: var(--cds-gap-sm); }
+  .rc-chip { border-radius: var(--cds-radius); padding: 3px 0; text-align: center; font-size: var(--cds-font-size-caption); line-height: 1.25; border: 1px solid var(--color-border-line); }
+  .rc-chip span { display: block; color: var(--color-fg-muted); font-size: .7rem; }
+  .rc-chip b { font-weight: 600; }
+  .rc-chip.v-good { background: color-mix(in srgb, var(--color-ok) 14%, transparent); }
+  .rc-chip.v-warn { background: color-mix(in srgb, var(--color-warn) 14%, transparent); }
+  .rc-chip.v-bad { background: color-mix(in srgb, var(--color-bad) 14%, transparent); }
+  .rc-key { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); line-height: 1.6; }
+  .rc-key b { font-weight: 600; }
+
+  /* tables */
+  .rc-tablewrap { overflow-x: auto; margin-top: var(--cds-gap-sm); }
+  .rc table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .rc th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); border-bottom: 1px solid var(--color-border-line); padding: var(--cds-pad-xs) var(--cds-pad-sm); white-space: nowrap; }
+  .rc td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .rc table.rc-wraphead th { white-space: normal; vertical-align: bottom; }
+  .rc td.wrap { white-space: normal; min-width: 6rem; }
+  .rc td.num, .rc th.num { text-align: right; }
+  .rc tbody tr.sel { background: color-mix(in srgb, var(--color-fg) 7%, transparent); }
+  .rc tbody tr.click { cursor: pointer; }
+  .rc tbody tr.later td { color: var(--color-fg-muted); }
+  .rc td.right::after { content: " \2713"; color: var(--color-ok); }
+  .rc td.wrong::after { content: " \2717"; color: var(--color-bad); }
+  .rc-sort { all: unset; cursor: pointer; }
+  .rc-sort:focus-visible { outline: 2px solid var(--cds-chart-reference); }
+  .c-md, .c-lg { display: none; }
+  @container rc (min-width: 700px) { .c-md { display: table-cell; } }
+  @container rc (min-width: 1100px) { .c-lg { display: table-cell; } }
+  @container rc (max-width: 699px) { .rc td, .rc th { padding: 6px 5px; } }
+
+  /* model vs vegas */
+  .rc-duel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cds-gap-sm); margin-top: var(--cds-gap-sm); }
+  .rc-duel > div { border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-sm) var(--cds-pad-md); }
+  .rc-duel .rc-grade { font-variant-numeric: tabular-nums; }
+
+  .rc-about p { margin: var(--cds-gap-xs) 0 0; font-size: var(--cds-font-size-caption); line-height: 1.5; }
+  .rc-about b { font-weight: 600; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  [data-dash-source-state=empty] { color: transparent; }
+</style>
+
+<div class="rc">
+  <header class="rc-head">
+    <h1>NFL Report Cards</h1>
+    <p class="rc-sub">2026 season through Week <b data-draw="h-wk" data-source="meta" data-field="through_week" data-row="0">—</b> · updated <span data-draw="h-upd" data-source="meta" data-field="updated" data-row="0">—</span>. Is each team actually good, or is its record fooling you?</p>
+    <p class="rc-take">Strongest team right now: <b data-draw="take-top" data-source="leaders" data-field="name" data-where="role=strongest">—</b>. Record furthest ahead of its play: <b data-draw="take-lucky" data-source="leaders" data-field="name" data-where="role=luckiest">—</b>. Furthest behind: <b data-draw="take-unlucky" data-source="leaders" data-field="name" data-where="role=unluckiest">—</b>.</p>
+  </header>
+
+  <div class="rc-layout">
+    <section class="rc-panel" id="team">
+      <div class="rc-picker">
+        <label for="rc-team">Team</label>
+        <select id="rc-team" data-draw="team-select" data-source="cards" aria-label="Team"></select>
+      </div>
+      <div class="rc-top">
+        <div class="rc-name" data-draw="c-name" data-source="cards" data-field="name">—</div>
+        <div class="rc-verdict" data-draw="c-verdict" data-source="cards" data-field="verdict">—</div>
+      </div>
+      <div class="rc-meta">Record <b data-draw="c-record" data-source="cards" data-field="record">—</b> · strength rank <b>#<span data-draw="c-sr" data-source="cards" data-field="strength_rank">—</span></b> (<span data-draw="c-rw" data-source="cards" data-field="rank_change_week">—</span> this week)</div>
+      <div class="rc-big">
+        <span class="rc-big-num" data-draw="c-proj" data-source="cards" data-field="projected_wins">—</span>
+        <span class="rc-big-label">projected wins<br><span data-draw="c-pw" data-source="cards" data-field="proj_change_week">—</span> this week · <span data-draw="c-pp" data-source="cards" data-field="proj_change_preseason">—</span> since preseason</span>
+      </div>
+      <div class="rc-tiles">
+        <div class="rc-tile"><div class="rc-tile-label">Strength</div><div class="rc-grade" data-draw="c-sg" data-source="cards" data-field="strength_grade">—</div><div class="rc-tile-note"><span data-draw="c-s" data-source="cards" data-field="strength">—</span> pts/game</div></div>
+        <div class="rc-tile"><div class="rc-tile-label">Offense</div><div class="rc-grade" data-draw="c-og" data-source="cards" data-field="offense_grade">—</div><div class="rc-tile-note">rank <span data-draw="c-or" data-source="cards" data-field="offense_rank">—</span></div></div>
+        <div class="rc-tile"><div class="rc-tile-label">Defense</div><div class="rc-grade" data-draw="c-dg" data-source="cards" data-field="defense_grade">—</div><div class="rc-tile-note">rank <span data-draw="c-dr" data-source="cards" data-field="defense_rank">—</span></div></div>
+        <div class="rc-tile"><div class="rc-tile-label">Luck</div><div class="rc-grade" data-draw="c-luck" data-source="cards" data-field="luck">—</div><div class="rc-tile-note"><span data-draw="c-lw" data-source="cards" data-field="luck_wins">—</span> wins vs. its play</div></div>
+        <div class="rc-tile"><div class="rc-tile-label">Preseason</div><div class="rc-grade" data-draw="c-pre" data-source="cards" data-field="preseason_proj">—</div><div class="rc-tile-note">wins · rank <span data-draw="c-prr" data-source="cards" data-field="preseason_rank">—</span></div></div>
+      </div>
+      <div class="rc-next" data-draw="c-next" data-source="cards" data-field="next_game">—</div>
+      <h3>Warning flags</h3>
+      <ul class="rc-flags" data-draw="c-flags" data-source="cards"></ul>
+      <details>
+        <summary>Luck and quarterback detail</summary>
+        <div class="rc-cols">
+          <dl>
+            <dt>Wins expected from its play</dt><dd data-draw="c-exp" data-source="cards" data-field="expected_wins">—</dd>
+            <dt>One-score games</dt><dd data-draw="c-one" data-source="cards" data-field="one_score">—</dd>
+            <dt>Turnover margin</dt><dd data-draw="c-to" data-source="cards" data-field="turnover_margin">—</dd>
+            <dt>Own fumbles lost</dt><dd data-draw="c-of" data-source="cards" data-field="own_fumbles_lost">—</dd>
+            <dt>Opponent fumbles recovered</dt><dd data-draw="c-pf" data-source="cards" data-field="opp_fumbles_recovered">—</dd>
+            <dt>Opponents' field-goal rate</dt><dd data-draw="c-fg" data-source="cards" data-field="opp_fg_pct">—</dd>
+          </dl>
+          <dl>
+            <dt>Current starter</dt><dd data-draw="c-qb" data-source="cards" data-field="qb">—</dd>
+            <dt>His EPA per dropback</dt><dd data-draw="c-qe" data-source="cards" data-field="qb_epa">—</dd>
+            <dt>His 3-year norm</dt><dd data-draw="c-qn" data-source="cards" data-field="qb_baseline">—</dd>
+            <dt>Pass offense EPA/dropback</dt><dd data-draw="c-pe" data-source="cards" data-field="pass_epa">—</dd>
+            <dt>Rush offense EPA/play</dt><dd data-draw="c-re" data-source="cards" data-field="rush_epa">—</dd>
+            <dt>Schedule left (1 = hardest)</dt><dd data-draw="c-slr" data-source="cards" data-field="sos_left_rank">—</dd>
+          </dl>
+        </div>
+      </details>
+    </section>
+
+    <section class="rc-panel" id="proj">
+      <h2>Prediction vs. reality</h2>
+      <p class="rc-note">Each week the model re-projects final wins from how the team has played. The shaded band is how far that projection has typically missed at that point of past seasons. The dotted line carries this week's projection to season's end.</p>
+      <div class="rc-chart" data-draw="proj-chart" data-source="weekly"></div>
+      <div class="rc-legend"><span><i style="background: var(--rc-c0)"></i>Projected final wins</span><span><i class="band" style="background: var(--rc-c0)"></i>Typical miss</span><span><i style="background: var(--rc-c1)"></i>Actual wins so far</span></div>
+    </section>
+
+    <section class="rc-panel" id="rank">
+      <h2>Strength rank vs. record rank</h2>
+      <p class="rc-note">1 is best. When the record line sits well above the strength line, the record is ahead of the play.</p>
+      <div class="rc-chart" data-draw="rank-chart" data-source="weekly"></div>
+      <div class="rc-legend"><span><i style="background: var(--rc-c0)"></i>Strength rank</span><span><i style="background: var(--rc-c1)"></i>Record rank</span></div>
+      <h3>Verdict by week</h3>
+      <div class="rc-strip" data-draw="verdict-strip" data-source="weekly"></div>
+      <p class="rc-key"><b>C</b> Contender · <b>S</b> Solid · <b>L</b> Good but lucky · <b>U</b> Better than their record · <b>M</b> Middle of the pack · <b>F</b> Fluff · <b>B</b> Bad · <b>P</b> Preseason · <b>E</b> Too early to call</p>
+    </section>
+
+    <section class="rc-panel" id="games">
+      <h2>Game by game</h2>
+      <p class="rc-note">The model's pick for each game, made with only what it knew the week before. ✓ and ✗ mark whether it picked the winner.</p>
+      <div class="rc-tablewrap">
+        <table data-source="team_games" data-row-key="team,game_id">
+          <thead><tr>
+            <th data-field="week" class="num">Wk</th>
+            <th data-field="opp">Opp.</th>
+            <th data-field="model_says">Model</th>
+            <th data-field="vegas_says" class="c-md">Vegas</th>
+            <th data-field="model_win_prob" class="num c-lg">Win chance</th>
+            <th data-field="result">Result</th>
+          </tr></thead>
+          <tbody data-draw="games-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="rc-panel" id="picks">
+      <h2>Week <span data-draw="p-wk" data-source="meta" data-field="next_week" data-row="0">—</span> picks</h2>
+      <p class="rc-note">The model's pick and the Vegas line for every game this week. Lines move until kickoff.</p>
+      <div class="rc-tablewrap">
+        <table data-source="games" data-row-key="game_id">
+          <thead><tr>
+            <th data-field="matchup">Game</th>
+            <th data-field="model_says">Model</th>
+            <th data-field="model_pick_prob" class="num c-md">Chance</th>
+            <th data-field="vegas_says">Vegas</th>
+          </tr></thead>
+          <tbody data-draw="picks-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="rc-panel" id="tally">
+      <h2>Model vs. Vegas</h2>
+      <p class="rc-note">Winners picked this season. Vegas is the favorite in the closing betting line.</p>
+      <div class="rc-duel">
+        <div><div class="rc-tile-label">Model</div><div class="rc-grade" data-draw="t-mp" data-source="pick_totals" data-field="pct" data-where="who=Model">—</div><div class="rc-tile-note"><span data-draw="t-mr" data-source="pick_totals" data-field="right" data-where="who=Model">—</span> of <span data-draw="t-mg" data-source="pick_totals" data-field="games" data-where="who=Model">—</span> · misses by <span data-draw="t-mm" data-source="pick_totals" data-field="avg_miss" data-where="who=Model">—</span> pts</div></div>
+        <div><div class="rc-tile-label">Vegas favorite</div><div class="rc-grade" data-draw="t-vp" data-source="pick_totals" data-field="pct" data-where="who=Vegas">—</div><div class="rc-tile-note"><span data-draw="t-vr" data-source="pick_totals" data-field="right" data-where="who=Vegas">—</span> of <span data-draw="t-vg" data-source="pick_totals" data-field="games" data-where="who=Vegas">—</span> · misses by <span data-draw="t-vm" data-source="pick_totals" data-field="avg_miss" data-where="who=Vegas">—</span> pts</div></div>
+      </div>
+      <div class="rc-chart short" data-draw="tally-chart" data-source="pick_by_week"></div>
+      <div class="rc-legend"><span><i style="background: var(--rc-c0)"></i>Model, share right so far</span><span><i style="background: var(--rc-c2)"></i>Vegas favorite</span></div>
+    </section>
+
+    <section class="rc-panel" id="scatter">
+      <h2>Record vs. true strength</h2>
+      <p class="rc-note">Every team, by how well it has actually played (left to right) and its win percentage (up and down). The dashed curve is the record a team that plays that well usually has. Teams above it are winning more than their play earns; below it, less. Tap a dot to open that team.</p>
+      <div class="rc-chart tall" data-draw="scatter-chart" data-source="cards"></div>
+      <div class="rc-legend">
+        <span><i class="dot" style="background: var(--color-ok)"></i>Contender</span>
+        <span><i class="dot" style="background: var(--cds-chart-status-critical, var(--color-bad))"></i>Fluff</span>
+        <span><i class="dot" style="background: var(--color-warn)"></i>Good but lucky</span>
+        <span><i class="dot" style="background: var(--cds-chart-reference)"></i>Better than their record</span>
+        <span><i class="dot" style="background: var(--cds-chart-muted)"></i>Everyone else</span>
+      </div>
+    </section>
+
+    <section class="rc-panel" id="league">
+      <h2>All 32 teams</h2>
+      <p class="rc-note">Sorted by strength. Tap a column to sort, a row to open that team.</p>
+      <div class="rc-tablewrap">
+        <table data-source="cards" data-row-key="team">
+          <thead><tr>
+            <th data-field="strength_rank" class="num" aria-sort="ascending"><button type="button" class="rc-sort" data-sort="strength_rank">#</button></th>
+            <th data-field="team"><button type="button" class="rc-sort" data-sort="team">Team</button></th>
+            <th data-field="record"><button type="button" class="rc-sort" data-sort="win_pct">Rec.</button></th>
+            <th data-field="projected_wins" class="num"><button type="button" class="rc-sort" data-sort="projected_wins">Proj.</button></th>
+            <th data-field="rank_change_week" class="num"><button type="button" class="rc-sort" data-sort="rank_change_week">Move</button></th>
+            <th data-field="verdict"><button type="button" class="rc-sort" data-sort="verdict">Verdict</button></th>
+            <th data-field="offense_grade" class="c-md"><button type="button" class="rc-sort" data-sort="offense_rank">Off.</button></th>
+            <th data-field="defense_grade" class="c-md"><button type="button" class="rc-sort" data-sort="defense_rank">Def.</button></th>
+            <th data-field="luck_wins" class="num c-md"><button type="button" class="rc-sort" data-sort="luck_wins">Luck</button></th>
+            <th data-field="preseason_proj" class="num c-md"><button type="button" class="rc-sort" data-sort="preseason_proj">Preseason</button></th>
+            <th data-field="strength" class="num c-lg"><button type="button" class="rc-sort" data-sort="strength_rank">Pts/game</button></th>
+            <th data-field="one_score" class="c-lg"><button type="button" class="rc-sort" data-sort="one_score">One-score</button></th>
+            <th data-field="turnover_margin" class="num c-lg"><button type="button" class="rc-sort" data-sort="turnover_margin">TO margin</button></th>
+            <th data-field="sos_left_rank" class="num c-lg"><button type="button" class="rc-sort" data-sort="sos_left_rank">Sched. left</button></th>
+            <th data-field="qb" class="c-lg"><button type="button" class="rc-sort" data-sort="qb">QB</button></th>
+          </tr></thead>
+          <tbody data-draw="league-body"></tbody>
+        </table>
+      </div>
+      <p class="rc-note">Move is the change in strength rank since last week. Luck is actual wins minus wins expected from the team's play. Schedule left: 1 is hardest.</p>
+    </section>
+
+    <section class="rc-panel" id="acc">
+      <h2>How much to trust the projection</h2>
+      <p class="rc-note">Average miss in final wins at each week, over 2022–2025. This week the typical miss is <b data-draw="a-now" data-source="accuracy" data-field="mae_model">—</b> wins. Record pace (wins so far stretched to a full season) is far worse in the first few weeks, so those weeks are left off its line.</p>
+      <div class="rc-chart short" data-draw="acc-chart" data-source="accuracy"></div>
+      <div class="rc-legend"><span><i style="background: var(--rc-c0)"></i>Model projection</span><span><i style="background: var(--cds-chart-muted)"></i>Record pace</span></div>
+    </section>
+
+    <section class="rc-panel" id="verdicts">
+      <h2>How each verdict has held up</h2>
+      <p class="rc-note">Every team-season 2022–2025, judged at Week 9, then followed through the rest of the season and the playoffs.</p>
+      <div class="rc-tablewrap">
+        <table class="rc-wraphead" data-source="verdicts" data-row-key="verdict">
+          <thead><tr>
+            <th data-field="verdict">Verdict</th>
+            <th data-field="teams" class="num">Teams</th>
+            <th data-field="win_pct_before" class="num">Win % before</th>
+            <th data-field="win_pct_after" class="num">Win % after</th>
+            <th data-field="playoff_rate" class="num c-md">Playoffs</th>
+            <th data-field="playoff_wins" class="num c-md">Playoff wins</th>
+            <th data-field="titles" class="num c-md">Titles</th>
+          </tr></thead>
+          <tbody data-draw="verdict-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="rc-panel rc-about" id="about">
+      <h2>How it works</h2>
+      <p><b>Strength</b> is net EPA per play: how many points each snap adds on offense, minus what the defense allows, adjusted for opponents and shown as points per game better or worse than an average team. It beat both win-loss record and point differential at predicting later games in 2022–2025 tests. It does not beat the Vegas line.</p>
+      <p><b>Preseason</b> starts each team at half of last season's strength. That starting point fades each week and is gone by midseason, after which only this season's play counts.</p>
+      <p><b>Luck</b> is wins minus the wins a team with its strength would usually have. Big gaps tend to close: one-score records, turnover margin and opponents' kicking barely repeat.</p>
+      <p><b>Verdicts:</b> Contender is one of the very strongest teams. Solid is good play with a record to match. Good but lucky is a good team winning more than its play earns. Better than their record is a good team losing more than it deserves. Fluff is a winning record built on weak play or luck. Verdicts start once a few weeks of games are in.</p>
+      <p>Data: nflverse play-by-play and schedules, including closing Vegas lines. Refreshed each Tuesday after Monday night's game.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+  // ---------- calculations ----------
+  dash.calc('leaders', {
+    inputs: ['cards'],
+    title: 'Strongest team and record gaps',
+    description: 'The top-rated team, and the teams whose records are furthest ahead of and behind their play.',
+    fn: (cards) => {
+      const pick = (better) => cards.reduce((a, b) => (better(b, a) ? b : a));
+      const top = pick((b, a) => Number(b.strength) > Number(a.strength));
+      const lucky = pick((b, a) => Number(b.luck_wins) > Number(a.luck_wins));
+      const unlucky = pick((b, a) => Number(b.luck_wins) < Number(a.luck_wins));
+      return [
+        {role: 'strongest', team: top.team, name: top.name},
+        {role: 'luckiest', team: lucky.team, name: lucky.name},
+        {role: 'unluckiest', team: unlucky.team, name: unlucky.name},
+      ];
+    },
+  });
+
+  dash.calc('pick_totals', {
+    inputs: ['games'],
+    title: 'Model vs. Vegas, season to date',
+    description: 'Winners picked (a tie counts half) and average miss in points, finished games only.',
+    fn: (games) => {
+      const done = games.filter((g) => g.status === 'final');
+      const row = (who, right, miss) => {
+        const graded = done.filter((g) => g[right] !== null && g[right] !== undefined);
+        const n = graded.length;
+        const r = graded.reduce((s, g) => s + Number(g[right]), 0);
+        const ms = done.filter((g) => g[miss] !== null && g[miss] !== undefined);
+        return {who, right: r, games: n, pct: n ? r / n : null, avg_miss: ms.length ? ms.reduce((s, g) => s + Number(g[miss]), 0) / ms.length : null};
+      };
+      return [row('Model', 'model_correct', 'model_miss'), row('Vegas', 'vegas_correct', 'vegas_miss')];
+    },
+  });
+
+  dash.calc('pick_by_week', {
+    inputs: ['games'],
+    title: 'Model vs. Vegas by week',
+    description: 'Share of winners picked through each week, cumulative.',
+    fn: (games) => {
+      const weeks = [...new Set(games.filter((g) => g.status === 'final').map((g) => Number(g.week)))].sort((a, b) => a - b);
+      let mr = 0, mn = 0, vr = 0, vn = 0;
+      return weeks.map((w) => {
+        games.filter((g) => g.status === 'final' && Number(g.week) === w).forEach((g) => {
+          if (g.model_correct !== null && g.model_correct !== undefined) { mr += Number(g.model_correct); mn += 1; }
+          if (g.vegas_correct !== null && g.vegas_correct !== undefined) { vr += Number(g.vegas_correct); vn += 1; }
+        });
+        return {week: w, model_pct: mn ? mr / mn : null, vegas_pct: vn ? vr / vn : null};
+      });
+    },
+  });
+
+  // ---------- helpers ----------
+  const DEFAULT_TEAM = 'JAX';
+  const team = () => dash.params().team || DEFAULT_TEAM;
+  const rowsOf = (id) => { const d = dash.data(id); return d.status === 'ok' && Array.isArray(d.data) ? d.data : []; };
+  const meta = () => rowsOf('meta')[0] || null;
+  const card = () => rowsOf('cards').find((r) => r.team === team()) || null;
+  const where = (el, t) => el.setAttribute('data-where', 'team=' + encodeURIComponent(t));
+  const f1 = d3.format('.1f'), f3 = d3.format('.3f'), pct0 = d3.format('.0%'), sgn1 = d3.format('+.1f');
+  const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
+  const signed = (v, fmt) => (v === null ? '—' : (v > 0 ? '+' : '') + (fmt ? fmt(v) : String(v)));
+  const VERDICT = {
+    'Contender': ['C', 'v-good'], 'Better than their record': ['U', 'v-good'], 'Solid': ['S', 'v-mid'], 'Middle of the pack': ['M', 'v-mid'],
+    'Good but lucky': ['L', 'v-warn'], 'Fluff': ['F', 'v-warn'], 'Bad': ['B', 'v-bad'], 'Preseason': ['P', 'v-mid'], 'Too early': ['E', 'v-mid'],
+  };
+  const C = () => ({c0: dash.colors[0], c1: dash.colors[1], c2: dash.colors[2]});
+  document.querySelectorAll('.rc').forEach((el) => { el.style.setProperty('--rc-c0', dash.colors[0]); el.style.setProperty('--rc-c1', dash.colors[1]); el.style.setProperty('--rc-c2', dash.colors[2]); });
+
+  const styleAxis = (g, grid) => {
+    g.attr('font-size', null).attr('font-family', null);
+    g.select('.domain').attr('stroke', grid ? 'none' : 'var(--cds-chart-axis)');
+    g.selectAll('line').attr('stroke', grid ? 'var(--cds-chart-grid)' : 'var(--cds-chart-axis)');
+    g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+  };
+  const measure = (svg, texts) => {
+    const t = svg.append('text').style('font-size', 'var(--cds-font-size-caption)');
+    let w = 0;
+    texts.forEach((s) => { t.text(s); w = Math.max(w, t.node().getComputedTextLength()); });
+    t.remove();
+    return w;
+  };
+  // Separate end labels vertically so they never touch.
+  const spread = (labels, minGap, lo, hi) => {
+    labels.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < minGap) labels[i].y = labels[i - 1].y + minGap;
+    const over = labels.length ? labels[labels.length - 1].y - hi : 0;
+    if (over > 0) labels.forEach((l) => { l.y -= over; });
+    for (let i = labels.length - 2; i >= 0; i--) if (labels[i + 1].y - labels[i].y < minGap) labels[i].y = labels[i + 1].y - minGap;
+    labels.forEach((l) => { l.y = Math.max(lo, l.y); });
+    return labels;
+  };
+
+  // A line chart over weeks with end labels, a tap/hover tooltip and optional band.
+  function weekChart(el, o) {
+    el.replaceChildren();
+    const W = Math.max(280, el.clientWidth);
+    const H = o.height || Math.round(Math.max(230, Math.min(330, W * 0.58)));
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', o.aria);
+    const y = d3.scaleLinear(o.yDomain, o.yReverse ? [0, 1] : [1, 0]);
+    const yTicks = o.yTicks || y.ticks(5);
+    const ml = Math.ceil(measure(svg, yTicks.map(o.yFmt))) + 10;
+    const labelTexts = o.series.filter((s) => s.pts.length).map((s) => s.label(s.pts[s.pts.length - 1]));
+    const mr = Math.ceil(measure(svg, labelTexts)) + 14;
+    const m = {t: 10, r: mr, b: 26, l: ml};
+    const x = d3.scaleLinear(o.xDomain, [m.l, W - m.r]);
+    y.range(o.yReverse ? [m.t, H - m.b] : [H - m.b, m.t]);
+    const xt = o.xTicks(W).filter((v) => v >= o.xDomain[0] && v <= o.xDomain[1]);
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickValues(xt).tickFormat(o.xFmt).tickSizeOuter(0)).call((g) => styleAxis(g, false));
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues(yTicks).tickFormat(o.yFmt).tickSize(-(W - m.l - m.r))).call((g) => styleAxis(g, true));
+    if (o.marker !== undefined && o.marker !== null) {
+      svg.append('line').attr('x1', x(o.marker)).attr('x2', x(o.marker)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '3 3');
+    }
+    if (o.band && o.band.length) {
+      svg.append('path').attr('d', d3.area((d) => x(d.x), (d) => y(d.lo), (d) => y(d.hi))(o.band)).attr('fill', o.series[0].color).attr('opacity', 0.16);
+    }
+    o.series.forEach((s) => {
+      if (s.extend) svg.append('path').attr('d', d3.line((d) => x(d.x), (d) => y(d.y))(s.extend)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2).attr('stroke-dasharray', '2 4').attr('stroke-linecap', 'round');
+      if (!s.pts.length) return;
+      svg.append('path').attr('d', d3.line((d) => x(d.x), (d) => y(d.y))(s.pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
+      const last = s.pts[s.pts.length - 1];
+      svg.append('circle').attr('cx', x(last.x)).attr('cy', y(last.y)).attr('r', 3.5).attr('fill', s.color);
+    });
+    const labels = spread(o.series.filter((s) => s.pts.length).map((s) => {
+      const end = s.extend && s.extend.length ? s.extend[s.extend.length - 1] : s.pts[s.pts.length - 1];
+      return {s, x: x(end.x) + 7, y: y(end.y) + 4, text: s.label(s.pts[s.pts.length - 1])};
+    }), 14, m.t + 8, H - m.b);
+    labels.forEach((l) => svg.append('text').attr('x', Math.min(l.x, W - mr + 7)).attr('y', l.y).attr('fill', l.s.color).style('font-size', 'var(--cds-font-size-caption)').style('font-weight', 600).text(l.text));
+    // tooltip
+    const xs = [...new Set(o.series.flatMap((s) => s.pts.map((p) => p.x)))].sort((a, b) => a - b);
+    if (!xs.length) return;
+    const tip = d3.select(el).append('div').attr('class', 'rc-tip').style('opacity', 0);
+    const rule = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-axis)').style('opacity', 0);
+    const dots = o.series.map((s) => svg.append('circle').attr('r', 4.5).attr('fill', s.color).attr('stroke', 'var(--color-bg)').attr('stroke-width', 1.5).style('opacity', 0));
+    const show = (ev) => {
+      const [px] = d3.pointer(ev, svg.node());
+      const xv = xs.reduce((a, b) => (Math.abs(x(b) - px) < Math.abs(x(a) - px) ? b : a));
+      rule.attr('x1', x(xv)).attr('x2', x(xv)).style('opacity', 1);
+      o.series.forEach((s, i) => { const p = s.pts.find((q) => q.x === xv); dots[i].style('opacity', p ? 1 : 0); if (p) dots[i].attr('cx', x(p.x)).attr('cy', y(p.y)); });
+      tip.style('opacity', 1).selectAll('*').remove();
+      tip.append('div').attr('class', 't1').text(o.xName(xv));
+      o.tipLines(xv).forEach(([color, text]) => { const d = tip.append('div'); if (color) d.append('i').style('background', color); d.append('span').text(text); });
+      const tw = tip.node().offsetWidth;
+      const left = x(xv) / W * el.clientWidth;
+      tip.style('left', Math.min(Math.max(0, left + 10), el.clientWidth - tw) + 'px').style('top', '0px');
+    };
+    const hide = () => { tip.style('opacity', 0); rule.style('opacity', 0); dots.forEach((d) => d.style('opacity', 0)); };
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', show).on('pointerdown', show).on('pointerleave', (ev) => { if (ev.pointerType !== 'touch') hide(); });
+  }
+  const weekTicks = (W) => (W < 460 ? [0, 3, 6, 9, 12, 15, 18] : d3.range(0, 19, 2));
+  const weekFmt = (v) => (v === 0 ? 'Pre' : String(v));
+  const weekName = (v) => (v === 0 ? 'Preseason' : 'After Week ' + v);
+
+  // ---------- header ----------
+  dash.draw('h-wk', (el) => { const r = meta(); el.textContent = r ? String(r.through_week) : '—'; });
+  dash.draw('h-upd', (el) => { const r = meta(); el.textContent = r ? d3.utcFormat('%b %-d')(new Date(r.updated + 'T12:00:00Z')) : '—'; });
+  [['take-top', 'strongest'], ['take-lucky', 'luckiest'], ['take-unlucky', 'unluckiest']].forEach(([name, role]) => {
+    dash.draw(name, (el) => { const r = rowsOf('leaders').find((x) => x.role === role); el.textContent = r ? r.name : '—'; });
+  });
+
+  // ---------- team card ----------
+  dash.draw('team-select', (sel) => {
+    const list = rowsOf('cards').slice().sort((a, b) => d3.ascending(a.name, b.name));
+    sel.replaceChildren(...list.map((r) => new Option(r.name, r.team)));
+    sel.value = team();
+    sel.onchange = () => dash.setParams({team: sel.value});
+  });
+  const arrow = (v) => (v === null ? '—' : v > 0 ? '▲' + v : v < 0 ? '▼' + Math.abs(v) : 'no change');
+  const SLOTS = {
+    'c-name': ['name'], 'c-verdict': ['verdict'], 'c-record': ['record'], 'c-sr': ['strength_rank'],
+    'c-rw': ['rank_change_week', arrow, true], 'c-proj': ['projected_wins', f1],
+    'c-pw': ['proj_change_week', (v) => signed(v, f1), true], 'c-pp': ['proj_change_preseason', (v) => signed(v, f1), true],
+    'c-sg': ['strength_grade'], 'c-s': ['strength', (v) => signed(v, f1)], 'c-og': ['offense_grade'], 'c-or': ['offense_rank'],
+    'c-dg': ['defense_grade'], 'c-dr': ['defense_rank'], 'c-luck': ['luck'], 'c-lw': ['luck_wins', (v) => signed(v, f1)],
+    'c-pre': ['preseason_proj', f1], 'c-prr': ['preseason_rank'], 'c-next': ['next_game'],
+    'c-exp': ['expected_wins', f1], 'c-one': ['one_score'], 'c-to': ['turnover_margin', (v) => signed(v)], 'c-of': ['own_fumbles_lost'],
+    'c-pf': ['opp_fumbles_recovered'], 'c-fg': ['opp_fg_pct', pct0], 'c-qb': ['qb'], 'c-qe': ['qb_epa', f3], 'c-qn': ['qb_baseline', f3],
+    'c-pe': ['pass_epa', f3], 'c-re': ['rush_epa', f3], 'c-slr': ['sos_left_rank'],
+  };
+  Object.entries(SLOTS).forEach(([name, [field, fmt, colored]]) => {
+    dash.draw(name, (el) => {
+      const r = card();
+      where(el, team());
+      const raw = r ? r[field] : null;
+      const v = typeof raw === 'number' ? raw : (fmt && raw !== null && raw !== undefined && raw !== '' && !isNaN(Number(raw)) ? Number(raw) : raw);
+      el.textContent = v === null || v === undefined || v === '' ? '—' : (fmt ? fmt(v) : String(v));
+      if (colored) el.className = v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+      if (name === 'c-verdict') el.className = 'rc-verdict ' + (r ? (VERDICT[r.verdict] || ['', 'v-mid'])[1] : 'v-mid');
+      if (name === 'c-next' && r && !r.next_game) el.textContent = '—';
+    });
+  });
+  dash.draw('c-flags', (ul) => {
+    const r = card();
+    const flags = r && r.flags ? String(r.flags).split(' | ').filter(Boolean) : [];
+    ul.replaceChildren(...(r ? (flags.length ? flags : ['None this week.']) : []).map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+  });
+
+  // ---------- prediction vs reality ----------
+  const series = () => rowsOf('weekly').filter((r) => r.team === team()).map((r) => ({...r, week: Number(r.week)})).sort((a, b) => a.week - b.week);
+  dash.draw('proj-chart', (el) => {
+    const s = series();
+    if (!s.length) { el.replaceChildren(); return; }
+    const {c0, c1} = C();
+    const last = s[s.length - 1];
+    const winsOf = (r) => Number(r.wins) + 0.5 * Number(r.ties);
+    weekChart(el, {
+      aria: `Projected final wins and actual wins by week for ${team()}`,
+      xDomain: [0, 18], xTicks: weekTicks, xFmt: weekFmt, xName: weekName,
+      yDomain: [0, 17], yTicks: [0, 4, 8, 12, 16], yFmt: (v) => String(v),
+      band: s.map((r) => ({x: r.week, lo: Math.max(0, Number(r.proj_wins) - Number(r.typical_miss)), hi: Math.min(17, Number(r.proj_wins) + Number(r.typical_miss))})),
+      series: [
+        {color: c0, pts: s.map((r) => ({x: r.week, y: Number(r.proj_wins)})), extend: last.week < 18 ? [{x: last.week, y: Number(last.proj_wins)}, {x: 18, y: Number(last.proj_wins)}] : null, label: (p) => 'Proj. ' + f1(p.y)},
+        {color: c1, pts: s.map((r) => ({x: r.week, y: winsOf(r)})), label: (p) => 'Won ' + d3.format('~g')(p.y)},
+      ],
+      tipLines: (w) => {
+        const r = s.find((q) => q.week === w);
+        if (!r) return [];
+        return [[c0, `Projected ${f1(Number(r.proj_wins))} wins (±${f1(Number(r.typical_miss))})`], [c1, `Record ${r.record}`], [null, `Strength rank #${r.strength_rank} · ${r.verdict}`]];
+      },
+    });
+  });
+
+  dash.draw('rank-chart', (el) => {
+    const s = series();
+    if (!s.length) { el.replaceChildren(); return; }
+    const {c0, c1} = C();
+    weekChart(el, {
+      aria: `Strength rank and record rank by week for ${team()}`,
+      xDomain: [0, 18], xTicks: weekTicks, xFmt: weekFmt, xName: weekName,
+      yDomain: [1, 32], yReverse: true, yTicks: [1, 8, 16, 24, 32], yFmt: (v) => '#' + v,
+      series: [
+        {color: c0, pts: s.map((r) => ({x: r.week, y: Number(r.strength_rank)})), label: (p) => 'Strength #' + p.y},
+        {color: c1, pts: s.filter((r) => num(r.record_rank) !== null).map((r) => ({x: r.week, y: Number(r.record_rank)})), label: (p) => 'Record #' + p.y},
+      ],
+      tipLines: (w) => {
+        const r = s.find((q) => q.week === w);
+        if (!r) return [];
+        const out = [[c0, `Strength #${r.strength_rank}`]];
+        if (num(r.record_rank) !== null) out.push([c1, `Record #${r.record_rank} (${r.record})`]);
+        out.push([null, r.verdict]);
+        return out;
+      },
+    });
+  });
+
+  dash.draw('verdict-strip', (el) => {
+    el.replaceChildren(...series().map((r) => {
+      const [abbr, cls] = VERDICT[r.verdict] || ['?', 'v-mid'];
+      const d = document.createElement('div');
+      d.className = 'rc-chip ' + cls;
+      d.setAttribute('aria-label', `${weekName(r.week)}: ${r.verdict}`);
+      d.title = `${weekName(r.week)}: ${r.verdict}`;
+      const top = document.createElement('span');
+      top.textContent = r.week === 0 ? 'Pre' : 'Wk ' + r.week;
+      const b = document.createElement('b');
+      b.textContent = abbr;
+      d.append(top, b);
+      return d;
+    }));
+  });
+
+  // ---------- game log ----------
+  const td = (text, cls) => { const c = document.createElement('td'); c.textContent = text === null || text === undefined ? '—' : String(text); if (cls) c.className = cls; return c; };
+  dash.draw('games-body', (tbody) => {
+    const t = team();
+    const list = rowsOf('team_games').filter((r) => r.team === t).sort((a, b) => Number(a.week) - Number(b.week));
+    const next = meta() ? num(meta().next_week) : null;
+    tbody.replaceChildren(...list.map((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = encodeURIComponent(r.team) + ',' + encodeURIComponent(r.game_id);
+      if (r.status !== 'final' && Number(r.week) !== next) tr.className = 'later';
+      const mark = r.model_right === 'Yes' ? 'right' : r.model_right === 'No' ? 'wrong' : '';
+      tr.append(td(r.week, 'num'), td(r.opp), td(r.model_says, mark), td(r.vegas_says, 'c-md'), td(pct0(Number(r.model_win_prob)), 'num c-lg'), td(r.result));
+      return tr;
+    }));
+  });
+
+  // ---------- this week's picks ----------
+  dash.draw('p-wk', (el) => { const r = meta(); el.textContent = r && num(r.next_week) !== null ? String(r.next_week) : '—'; });
+  dash.draw('picks-body', (tbody) => {
+    const r = meta();
+    const next = r ? num(r.next_week) : null;
+    const list = next === null ? [] : rowsOf('games').filter((g) => Number(g.week) === next);
+    tbody.replaceChildren(...list.map((g) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = g.game_id;
+      tr.append(td(g.matchup), td(g.model_says), td(pct0(Number(g.model_pick_prob)), 'num c-md'), td(g.vegas_says));
+      return tr;
+    }));
+  });
+
+  // ---------- model vs vegas ----------
+  const tot = (who) => rowsOf('pick_totals').find((r) => r.who === who) || null;
+  [['t-mp', 'Model', 'pct'], ['t-mr', 'Model', 'right'], ['t-mg', 'Model', 'games'], ['t-mm', 'Model', 'avg_miss'],
+   ['t-vp', 'Vegas', 'pct'], ['t-vr', 'Vegas', 'right'], ['t-vg', 'Vegas', 'games'], ['t-vm', 'Vegas', 'avg_miss']].forEach(([name, who, field]) => {
+    dash.draw(name, (el) => {
+      const r = tot(who);
+      const v = r ? num(r[field]) : null;
+      el.textContent = v === null ? '—' : field === 'pct' ? pct0(v) : field === 'avg_miss' ? f1(v) : d3.format('~g')(v);
+    });
+  });
+  dash.draw('tally-chart', (el) => {
+    const s = rowsOf('pick_by_week').map((r) => ({week: Number(r.week), m: num(r.model_pct), v: num(r.vegas_pct)}));
+    if (!s.length) { el.replaceChildren(); return; }
+    const {c0, c2} = C();
+    const vals = s.flatMap((r) => [r.m, r.v]).filter((v) => v !== null);
+    const lo = Math.max(0, Math.floor((d3.min(vals) - 0.05) * 10) / 10), hi = Math.min(1, Math.ceil((d3.max(vals) + 0.05) * 10) / 10);
+    weekChart(el, {
+      height: 200,
+      aria: 'Share of winners picked so far by the model and by the Vegas favorite, by week',
+      xDomain: [1, 18], xTicks: (W) => (W < 460 ? [1, 6, 12, 18] : [1, 3, 6, 9, 12, 15, 18]), xFmt: (v) => String(v), xName: (w) => 'Through Week ' + w,
+      yDomain: [lo, hi], yTicks: d3.range(lo, hi + 0.001, 0.1).map((v) => Math.round(v * 10) / 10), yFmt: pct0,
+      series: [
+        {color: c0, pts: s.filter((r) => r.m !== null).map((r) => ({x: r.week, y: r.m})), label: (p) => 'Model ' + pct0(p.y)},
+        {color: c2, pts: s.filter((r) => r.v !== null).map((r) => ({x: r.week, y: r.v})), label: (p) => 'Vegas ' + pct0(p.y)},
+      ],
+      tipLines: (w) => { const r = s.find((q) => q.week === w); return r ? [[c0, 'Model ' + pct0(r.m)], [c2, 'Vegas ' + pct0(r.v)]] : []; },
+    });
+  });
+
+  // ---------- record vs. true strength ----------
+  const LOGISTIC_K = 0.095; // expected win% = 1 / (1 + e^(-K * strength)), the luck ledger's fit
+  const dotColor = (v) => ({'Contender': 'var(--color-ok)', 'Fluff': 'var(--cds-chart-status-critical, var(--color-bad))', 'Good but lucky': 'var(--color-warn)', 'Better than their record': 'var(--cds-chart-reference)'}[v] || 'var(--cds-chart-muted)');
+  dash.draw('scatter-chart', (el) => {
+    el.replaceChildren();
+    const data = rowsOf('cards').map((d) => ({...d, strength: Number(d.strength), win_pct: Number(d.win_pct)}));
+    if (!data.length) return;
+    const t = team();
+    const W = Math.max(280, el.clientWidth);
+    const narrow = W < 560;
+    const H = narrow ? 340 : 420;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Win percentage against true strength for all 32 teams');
+    const yTicks = [0, 0.25, 0.5, 0.75, 1];
+    const m = {t: 12, r: 16, b: 44, l: Math.ceil(measure(svg, yTicks.map(pct0))) + 10};
+    const x = d3.scaleLinear(d3.extent(data, (d) => d.strength), [m.l, W - m.r]).nice();
+    const y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 4 : 8).tickFormat((v) => (v > 0 ? '+' : '') + v).tickSizeOuter(0)).call((g) => styleAxis(g, false));
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues(yTicks).tickFormat(pct0).tickSize(-(W - m.l - m.r))).call((g) => styleAxis(g, true));
+    svg.append('text').attr('x', W - m.r).attr('y', H - 6).attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text('Strength, points per game vs. average →');
+    svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+    const xs = d3.range(x.domain()[0], x.domain()[1] + 0.01, 0.25);
+    svg.append('path').attr('d', d3.line((v) => x(v), (v) => y(1 / (1 + Math.exp(-LOGISTIC_K * v))))(xs)).attr('fill', 'none').attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    const tip = d3.select(el).append('div').attr('class', 'rc-tip').style('opacity', 0);
+    const dots = svg.append('g'), labs = svg.append('g');
+    const r0 = narrow ? 5 : 6;
+    // selected team last so it draws on top
+    const order = data.slice().sort((a, b) => (a.team === t) - (b.team === t));
+    const pts = order.map((d) => ({d, cx: x(d.strength), cy: y(d.win_pct), sel: d.team === t}));
+    // greedy label placement: selected first, then flagged verdicts, then the rest; skip a label that would collide
+    const boxes = pts.map((p) => ({x0: p.cx - r0, x1: p.cx + r0, y0: p.cy - r0, y1: p.cy + r0}));
+    const hits = (b) => boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
+    const rank = (p) => (p.sel ? 0 : dotColor(p.d.verdict) !== 'var(--cds-chart-muted)' ? 1 : 2);
+    const probe = svg.append('text').style('font-size', 'var(--cds-font-size-caption)');
+    pts.slice().sort((a, b) => rank(a) - rank(b)).forEach((p) => {
+      probe.text(p.d.team).style('font-weight', p.sel ? 600 : 400);
+      const w = probe.node().getComputedTextLength(), h = 11;
+      const spots = [[p.cx + r0 + 3, p.cy + 4, 'start'], [p.cx - r0 - 3, p.cy + 4, 'end'], [p.cx, p.cy - r0 - 4, 'middle'], [p.cx, p.cy + r0 + 12, 'middle']];
+      for (const [lx, ly, anchor] of spots) {
+        const x0 = anchor === 'start' ? lx : anchor === 'end' ? lx - w : lx - w / 2;
+        const b = {x0: x0 - 1, x1: x0 + w + 1, y0: ly - h, y1: ly + 2};
+        if (b.x0 < m.l || b.x1 > W - 2 || b.y0 < 0 || b.y1 > H - m.b) continue;
+        if (hits(b) && !p.sel) continue;
+        boxes.push(b);
+        labs.append('text').attr('x', lx).attr('y', ly).attr('text-anchor', anchor).attr('fill', p.sel ? 'var(--color-fg)' : 'var(--color-fg-muted)')
+          .style('font-size', 'var(--cds-font-size-caption)').style('font-weight', p.sel ? 600 : 400).style('pointer-events', 'none').text(p.d.team);
+        break;
+      }
+    });
+    probe.remove();
+    pts.forEach(({d, cx, cy, sel}) => {
+      dots.append('circle').attr('cx', cx).attr('cy', cy).attr('r', sel ? r0 + 2 : r0).attr('fill', dotColor(d.verdict))
+        .attr('stroke', sel ? 'var(--color-fg)' : 'var(--color-bg)').attr('stroke-width', sel ? 2 : 1).style('cursor', 'pointer')
+        .on('click', () => { dash.setParams({team: d.team}); document.getElementById('team')?.scrollIntoView({behavior: 'smooth'}); })
+        .on('pointermove', (ev) => {
+          const [px, py] = d3.pointer(ev, el);
+          tip.style('opacity', 1).selectAll('*').remove();
+          tip.append('div').attr('class', 't1').text(d.name);
+          tip.append('div').text(`${d.record} · ${d.verdict}`);
+          tip.append('div').text(`Strength ${signed(d.strength, f1)} (#${d.strength_rank}) · luck ${signed(Number(d.luck_wins), f1)} wins`);
+          const tw = tip.node().offsetWidth;
+          tip.style('left', Math.min(Math.max(0, px + 12), el.clientWidth - tw) + 'px').style('top', Math.max(0, py - 56) + 'px');
+        })
+        .on('pointerleave', (ev) => { if (ev.pointerType !== 'touch') tip.style('opacity', 0); });
+    });
+  });
+
+  // ---------- league table ----------
+  window.rcSort = window.rcSort || {key: 'strength_rank', dir: 1};
+  dash.draw('league-body', (tbody) => {
+    const s = window.rcSort;
+    const t = team();
+    const val = (r, k) => (k === 'one_score' ? (() => { const [w, l] = String(r[k]).split('-').map(Number); return w - l; })() : r[k]);
+    const list = rowsOf('cards').slice().sort((a, b) => {
+      const va = val(a, s.key), vb = val(b, s.key);
+      const c = typeof va === 'number' || !isNaN(Number(va)) && va !== null && va !== '' ? d3.ascending(Number(va), Number(vb)) : d3.ascending(String(va), String(vb));
+      return s.dir * c || d3.ascending(Number(a.strength_rank), Number(b.strength_rank));
+    });
+    tbody.replaceChildren(...list.map((r) => {
+      const tr = document.createElement('tr');
+      tr.className = 'click' + (r.team === t ? ' sel' : '');
+      tr.onclick = () => { dash.setParams({team: r.team}); document.getElementById('team')?.scrollIntoView({behavior: 'smooth'}); };
+      const mv = num(r.rank_change_week);
+      tr.append(
+        td(r.strength_rank, 'num'), td(r.team), td(r.record), td(f1(Number(r.projected_wins)), 'num'),
+        td(mv === null ? '—' : signed(mv), 'num ' + (mv > 0 ? 'up' : mv < 0 ? 'down' : 'flat')),
+        td(r.verdict, 'wrap ' + (VERDICT[r.verdict] || ['', 'v-mid'])[1]),
+        td(r.offense_grade, 'c-md'), td(r.defense_grade, 'c-md'), td(signed(num(r.luck_wins), f1), 'num c-md'), td(f1(Number(r.preseason_proj)), 'num c-md'),
+        td(signed(num(r.strength), f1), 'num c-lg'), td(r.one_score, 'c-lg'), td(signed(num(r.turnover_margin)), 'num c-lg'), td(r.sos_left_rank, 'num c-lg'), td(r.qb, 'c-lg'));
+      return tr;
+    }));
+  });
+  document.querySelectorAll('#league .rc-sort').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.sort;
+      const desc = ['win_pct', 'luck_wins', 'turnover_margin', 'projected_wins', 'rank_change_week', 'preseason_proj', 'one_score'].includes(key);
+      const s = window.rcSort;
+      window.rcSort = s.key === key ? {key, dir: -s.dir} : {key, dir: desc ? -1 : 1};
+      document.querySelectorAll('#league th').forEach((th) => th.removeAttribute('aria-sort'));
+      btn.closest('th')?.setAttribute('aria-sort', window.rcSort.dir === 1 ? 'ascending' : 'descending');
+      dash.draw('league-body');
+    });
+  });
+
+  // ---------- projection accuracy ----------
+  dash.draw('a-now', (el) => {
+    const r = meta();
+    const w = r ? num(r.through_week) : null;
+    const a = rowsOf('accuracy').find((q) => Number(q.week) === Math.min(w ?? -1, 17));
+    el.setAttribute('data-where', 'week=' + (a ? a.week : ''));
+    el.textContent = a ? f1(Number(a.mae_model)) : '—';
+  });
+  dash.draw('acc-chart', (el) => {
+    const s = rowsOf('accuracy').map((r) => ({week: Number(r.week), m: Number(r.mae_model), p: Number(r.mae_pace)}));
+    if (!s.length) { el.replaceChildren(); return; }
+    const {c0} = C();
+    const muted = 'var(--cds-chart-muted)';
+    const r = meta();
+    const now = r ? Math.min(num(r.through_week), 17) : null;
+    const top = Math.ceil(d3.max(s, (d) => d.m) + 0.5);
+    weekChart(el, {
+      height: 200, marker: now,
+      aria: 'Average miss of projected final wins by week, model projection versus record pace, 2022 to 2025',
+      xDomain: [0, 17], xTicks: (W) => (W < 460 ? [0, 4, 8, 12, 17] : [0, 2, 4, 6, 8, 10, 12, 14, 17]), xFmt: weekFmt, xName: (w) => (w === 0 ? 'Preseason' : 'After Week ' + w),
+      yDomain: [0, top], yTicks: d3.range(0, top + 0.001, 1), yFmt: (v) => String(v),
+      series: [
+        {color: c0, pts: s.map((d) => ({x: d.week, y: d.m})), label: (p) => 'Model ' + f1(p.y)},
+        {color: muted, pts: s.filter((d) => d.week >= 3 && d.p <= top).map((d) => ({x: d.week, y: d.p})), label: (p) => 'Pace ' + f1(p.y)},
+      ],
+      tipLines: (w) => { const d = s.find((q) => q.week === w); return d ? [[c0, `Model misses by ${f1(d.m)} wins`]].concat(w >= 3 ? [[muted, `Record pace misses by ${f1(d.p)}`]] : []) : []; },
+    });
+  });
+
+  // ---------- verdict back-test ----------
+  dash.draw('verdict-body', (tbody) => {
+    const f3x = d3.format('.3f');
+    tbody.replaceChildren(...rowsOf('verdicts').map((r) => {
+      const tr = document.createElement('tr');
+      tr.append(td(r.verdict, 'wrap ' + (VERDICT[r.verdict] || ['', 'v-mid'])[1]), td(r.teams, 'num'), td(f3x(Number(r.win_pct_before)), 'num'), td(f3x(Number(r.win_pct_after)), 'num'),
+        td(pct0(Number(r.playoff_rate)), 'num c-md'), td(r.playoff_wins, 'num c-md'), td(r.titles, 'num c-md'));
+      return tr;
+    }));
+  });
+</script>
+
+</div>
+<footer class="site-foot">
+  Made with Claude from <a href="https://github.com/nflverse">nflverse</a> play-by-play data, schedules and closing Vegas lines. Updated every Tuesday during the regular season. For fun, not betting advice.
+</footer>
+<script>window.__dashStart();</script>
+</body>
+</html>

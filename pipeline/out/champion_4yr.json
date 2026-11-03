@@ -1,0 +1,19 @@
+{
+ "opp_adj": 0.5,
+ "wp_lo": 0.0,
+ "wp_hi": 1.0,
+ "excl_2min": false,
+ "fumble_neutral": false,
+ "int_def": 1.0,
+ "int_off": 1.0,
+ "def_w": 1.0,
+ "rush_w": 1.0,
+ "sr_blend": 0.0,
+ "down34_w": 1.0,
+ "clip": null,
+ "st_w": 0.0,
+ "half_life": null,
+ "prior_k": 0.0,
+ "prior_rho": 0.6,
+ "pd_blend": 0.0
+}

@@ -1,0 +1,4 @@
+pipeline/data/
+pipeline/out/dash_*/
+pipeline/out/cards_*
+__pycache__/
