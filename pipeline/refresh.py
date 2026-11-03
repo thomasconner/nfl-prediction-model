@@ -1,6 +1,6 @@
 """Weekly refresh for the NFL Report Cards dashboard.
 
-Usage: python3 -I refresh.py <work_dir> <season>
+Usage: python3 -I refresh.py <work_dir> <season> [--extra]
   <work_dir> holds this bundle's files (model.py, weekly.py, out/*.json ...).
 Downloads nflverse play-by-play (season-5 .. season) and the schedule into <work_dir>/data,
 rebuilds the compact tables, runs weekly.py, sanity-checks the output and prints a JSON summary.
@@ -31,6 +31,12 @@ for y in years:
     if y == season or not os.path.exists(dest):
         fetch(PBP.format(y=y), dest)
 fetch(GAMES, f'{data}/games.csv')
+if '--extra' in sys.argv:  # research inputs: injury reports, snap counts, player id crosswalk
+    REL = 'https://github.com/nflverse/nflverse-data/releases/download'
+    for y in years[1:]:
+        fetch(f'{REL}/injuries/injuries_{y}.parquet', f'{data}/inj_{y}.parquet')
+        fetch(f'{REL}/snap_counts/snap_counts_{y}.parquet', f'{data}/snap_{y}.parquet')
+    fetch(f'{REL}/players/players.csv', f'{data}/players.csv')
 env = dict(os.environ, NFL_DATA=data, NFL_YEARS=','.join(map(str, years)))
 subprocess.run([sys.executable, '-I', f'{work}/build_data.py', data], check=True, env=env, cwd=work, stdout=subprocess.DEVNULL)
 subprocess.run([sys.executable, '-I', f'{work}/weekly.py', f'{work}/out', str(season)], check=True, env=env, cwd=work, stdout=subprocess.DEVNULL)
