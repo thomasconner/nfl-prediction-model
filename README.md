@@ -19,16 +19,20 @@ Built with Claude from [nflverse](https://github.com/nflverse) data. For fun, no
   - `build_site.py <pipeline_dir> <season> <site_dir>` writes the site.
   - `log_week.py <pipeline_dir> <season> <log_dir>` adds this week's entries to the log.
   - `evaluate.py <pipeline_dir> <log_dir> [season]` prints the scorecard: winners picked vs. Vegas, calibration, home-field bias, quarterback-change games.
-  - `ab.py`, `ledger.py`, `fit_prior.py`, `stability.py`, `holdout.py` are the research tools used to choose and tune the method (`out/method.json`).
+  - `pregame.py <pipeline_dir> <season> <log_dir>` re-picks games kicking off in the next 2½ hours with the latest starters and injury report, and logs them.
+  - `live_addons.py` holds the next-game adjustments (quarterback change, starters ruled out, rest days). The coefficients are in `out/addons.json`, chosen by `addons.py` + `cv.py` with leave-one-season-out cross-validation. Vegas is never an input.
+  - `ab.py`, `ledger.py`, `fit_prior.py`, `stability.py` and `holdout.py` are the research tools used to choose and tune the rating method (`out/method.json`).
 
 ## Weekly update
 
 A scheduled job runs every Tuesday afternoon (Eastern) during the regular season:
 
 ```
-python3 -I pipeline/refresh.py pipeline 2026
+python3 -I pipeline/refresh.py pipeline 2026 --extra
 NFL_DATA=pipeline/data python3 -I pipeline/log_week.py pipeline 2026 log
 python3 -I pipeline/build_site.py pipeline 2026 .
 ```
 
 It then commits the new `data/` and `log/` files and pushes.
+
+About an hour before each kickoff slot (Thursday night, Sunday international, 1 PM, 4 PM and Sunday night, Monday night, plus holiday and Saturday games), another job runs `refresh.py ... --extra` and then `pregame.py`. These final picks are the official ones the model is graded on.

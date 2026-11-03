@@ -19,9 +19,13 @@ data = os.environ.get('NFL_DATA', f'{work}/data')
 VEGAS_SD = 13.5  # spread to win chance (normal), the usual rule of thumb for NFL margins
 
 rows = []
-for f in sorted(glob.glob(f'{log_dir}/*/week_*_picks.json')):
+for f in sorted(glob.glob(f'{log_dir}/*/week_*_picks.json') + glob.glob(f'{log_dir}/*/week_*_pregame_*.json')):
     rows += json.load(open(f))
-L = pd.DataFrame(rows)
+ALL = pd.DataFrame(rows)
+ALL['stage'] = ALL.get('stage', pd.Series(index=ALL.index, dtype=object))
+ALL['stage'] = ALL.stage.fillna(ALL.logged_live.map({True: 'tuesday', False: 'rebuilt'}))
+# the official pick is the newest one logged before kickoff
+L = ALL.sort_values('logged_at').groupby('game_id').tail(1).copy()
 if seasons:
     L = L[L.season.isin(seasons)]
 if live_only:
@@ -43,7 +47,8 @@ else:
     L['vegas_err'] = L.result - L.vegas_spread_home
     L['close_err'] = L.result - L.closing_spread_home
     L['home_won'] = np.where(L.result == 0, 0.5, (L.result > 0).astype(float))
-    w(f'# Model scorecard ({len(L)} finished games; {int(L.logged_live.sum())} logged live before kickoff)\n')
+    w(f'# Model scorecard ({len(L)} finished games; {int(L.logged_live.sum())} logged live before kickoff, '
+      f"{int((L.stage == 'pregame').sum())} of them re-picked within hours of kickoff)\n')
     w('| | Winners picked | Average miss (pts) | Bias, actual minus predicted home margin |')
     w('|---|---|---|---|')
     w(f"| Model | {L.model_right.mean():.1%} | {L.model_err.abs().mean():.2f} | {L.model_err.mean():+.2f} |")
@@ -95,6 +100,19 @@ else:
         if one.any():
             w(f' In games where only one team changed QB, that team did {(-(qc.model_err * sgn)[one]).mean():+.1f} points worse than the model predicted.')
 
+    both = ALL[ALL.game_id.isin(L.game_id)].pivot_table(index='game_id', columns='stage', values='model_margin_home', aggfunc='last')
+    if {'tuesday', 'pregame'} <= set(both.columns):
+        b = both.dropna(subset=['tuesday', 'pregame']).join(L.set_index('game_id').result)
+        if len(b):
+            w(f"\n## Tuesday pick vs. pre-kickoff pick ({len(b)} games)\n")
+            w(f"Average miss: Tuesday {(b.result - b.tuesday).abs().mean():.2f}, pre-kickoff {(b.result - b.pregame).abs().mean():.2f}; "
+              f"picks changed sides in {int((np.sign(b.tuesday) != np.sign(b.pregame)).sum())} games.")
+    if 'model_version' in L:
+        w('\n## By model version\n')
+        w('| Version | Games | Model right | Model miss |')
+        w('|---|---|---|---|')
+        for v_, d in L.groupby('model_version'):
+            w(f'| {v_} | {len(d)} | {d.model_right.mean():.0%} | {d.model_err.abs().mean():.1f} |')
     w('\n## By week\n')
     w('| Week | Games | Model right | Vegas right | Model miss | Vegas miss |')
     w('|---|---|---|---|---|---|')

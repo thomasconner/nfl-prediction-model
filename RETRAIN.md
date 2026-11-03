@@ -39,12 +39,19 @@ All commands run from the repo root unless noted.
    This writes `out/champion_<season>.json` and `out/ab_log_<season>.csv`. The acceptance rule is unchanged: a change must win at least 90% of bootstrap resamples, and simpler wins ties.
    - Add new candidates to `CANDIDATES` in `ab.py` when the log supports them. Examples: a smaller home-field value, or a quarterback-change adjustment (`qb_filter` is an existing starting point).
    - Keep the season you are judging out of anything you tune on when you report its accuracy.
-5. **Refit what depends on the method.**
+5. **Re-select the next-game add-ons.** From `pipeline/`:
+   ```
+   python3 -I refresh.py . <season> --extra
+   NFL_DATA=data NFL_SEASONS=2022,...,<season> python3 -I addons.py .
+   python3 -I cv.py .
+   ```
+   This tests quarterback change, injuries, rest, home-field variants, travel, FTN charting luck and CPOE with leave-one-season-out cross-validation. FTN charting must be downloaded as `data/ftn_<year>.parquet` (from the nflverse-data releases, `ftn_charting/ftn_charting_<year>.parquet`). Add new candidates to `addons.py`, and keep Vegas out of the inputs. Update `out/addons.json` from `out/addon_selection.json` if the selection changes.
+6. **Refit what depends on the method.**
    - Luck curve: `python3 -I ledger.py out champion_<season>.json`. This writes `ledger_params.json`.
    - Preseason starting point: `NFL_DATA=data NFL_TUNE=2022,...,<season> python3 -I fit_prior.py`. This writes `prior_params.json` and `proj_backtest.csv`.
    - Split-half stability, for the warning flags: `python3 -I stability.py out`.
-6. **Verdict check.** For each verdict in `after_week_08_cards.json` / `after_week_09_cards.json`, compare those teams' win percentage before and after, and their playoff results.
-7. **Report.** Work on branch `retrain-<next season>`. Write `research/retrain_<season>.md`: what was tested, what won and by how much, what changed in the verdict rules, and how the new method would have done on the season just finished. Push the branch and summarize for Thomas. **Do not merge to main.**
-8. **When Thomas approves.**
+7. **Verdict check.** For each verdict in `after_week_08_cards.json` / `after_week_09_cards.json`, compare those teams' win percentage before and after, and their playoff results.
+8. **Report.** Work on branch `retrain-<next season>`. Write `research/retrain_<season>.md`: what was tested, what won and by how much, what changed in the verdict rules, and how the new method would have done on the season just finished. Push the branch and summarize for Thomas. **Do not merge to main.**
+9. **When Thomas approves.**
    - Replace `pipeline/out/method.json` (and `ledger_params.json`, `prior_params.json` and `proj_backtest.csv` if refit). The model version hash changes automatically.
    - Change the season in the weekly scheduled task to the new one.

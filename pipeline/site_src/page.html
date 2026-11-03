@@ -198,7 +198,7 @@
 
     <section class="rc-panel" id="games">
       <h2>Game by game</h2>
-      <p class="rc-note">The model's pick for each game, made with only what it knew the week before. ✓ and ✗ mark whether it picked the winner.</p>
+      <p class="rc-note">The model's pick for each game, locked in before kickoff using only what was known then. The final pick comes about an hour before kickoff. ✓ and ✗ mark whether it picked the winner.</p>
       <div class="rc-tablewrap">
         <table data-source="team_games" data-row-key="team,game_id">
           <thead><tr>
@@ -216,7 +216,7 @@
 
     <section class="rc-panel" id="picks">
       <h2>Week <span data-draw="p-wk" data-source="meta" data-field="next_week" data-row="0">—</span> picks</h2>
-      <p class="rc-note">The model's pick and the Vegas line for every game this week. Lines move until kickoff.</p>
+      <p class="rc-note">The model's pick and the Vegas line for every game this week. The model re-picks each game about an hour before kickoff with the latest starters and injury report. Lines move until kickoff.</p>
       <div class="rc-tablewrap">
         <table data-source="games" data-row-key="game_id">
           <thead><tr>
@@ -228,6 +228,9 @@
           <tbody data-draw="picks-body"></tbody>
         </table>
       </div>
+      <h3>Heads-up</h3>
+      <p class="rc-note">Adjustments the model made for quarterback changes and starters ruled out.</p>
+      <ul class="rc-flags" data-draw="pick-notes" data-source="games"></ul>
     </section>
 
     <section class="rc-panel" id="tally">
@@ -318,6 +321,7 @@
     <section class="rc-panel rc-about" id="about">
       <h2>How it works</h2>
       <p><b>Strength</b> is net EPA per play: how many points each snap adds on offense, minus what the defense allows, adjusted for opponents and shown as points per game better or worse than an average team. It beat both win-loss record and point differential at predicting later games in 2022–2025 tests. It does not beat the Vegas line.</p>
+      <p><b>Game picks</b> start from strength and home field, then adjust for three things: a quarterback change (the new starter's track record against the quarterback play already in the rating), starters ruled out on the injury report (weighted by how much they play), and rest days. Each was added only after it made the picks more accurate on seasons it wasn't tuned on. Vegas lines are never an input; they're only the yardstick.</p>
       <p><b>Preseason</b> starts each team at half of last season's strength. That starting point fades each week and is gone by midseason, after which only this season's play counts.</p>
       <p><b>Luck</b> is wins minus the wins a team with its strength would usually have. Big gaps tend to close: one-score records, turnover margin and opponents' kicking barely repeat.</p>
       <p><b>Verdicts:</b> Contender is one of the very strongest teams. Solid is good play with a record to match. Good but lucky is a good team winning more than its play earns. Better than their record is a good team losing more than it deserves. Fluff is a winning record built on weak play or luck. Verdicts start once a few weeks of games are in.</p>
@@ -617,6 +621,14 @@
       tr.append(td(g.matchup), td(g.model_says), td(pct0(Number(g.model_pick_prob)), 'num c-md'), td(g.vegas_says));
       return tr;
     }));
+  });
+
+  dash.draw('pick-notes', (ul) => {
+    const r = meta();
+    const next = r ? num(r.next_week) : null;
+    const list = next === null ? [] : rowsOf('games').filter((g) => Number(g.week) === next && g.notes);
+    const items = list.flatMap((g) => String(g.notes).split(' | ').map((t) => `${g.matchup}: ${t}`));
+    ul.replaceChildren(...(rowsOf('games').length ? (items.length ? items : ['None flagged yet. Injury reports come out later in the week.']) : []).map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
   });
 
   // ---------- model vs vegas ----------

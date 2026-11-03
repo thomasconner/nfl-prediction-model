@@ -1,0 +1,19 @@
+base: RMSE 12.932  SU 61.4%  (n=1208)
+  candidates: qb_change 12.888, inj_all 12.895, inj_defense 12.905, rest_diff 12.916, inj_skill 12.918, bye 12.924, travel 12.930, inj_ol 12.934, home_div 12.938, home_trend 12.938, ftn_drop 12.939, early_body 12.942, ftn_int 12.943, cpoe 12.943
+ADD qb_change: RMSE 12.932 -> 12.888, SU 61.4% -> 61.2%, P(better) 0.86
+  candidates: inj_all 12.854, inj_defense 12.866, inj_skill 12.871, rest_diff 12.872, bye 12.882, travel 12.888, inj_ol 12.888, home_div 12.894, ftn_drop 12.895, home_trend 12.895, early_body 12.898, ftn_int 12.899, cpoe 12.900
+ADD inj_all: RMSE 12.888 -> 12.854, SU 61.2% -> 62.0%, P(better) 0.84
+  candidates: rest_diff 12.842, bye 12.851, travel 12.853, home_trend 12.858, home_div 12.859, ftn_drop 12.860, ftn_int 12.862, early_body 12.863, cpoe 12.866
+ADD rest_diff: RMSE 12.854 -> 12.842, SU 62.0% -> 62.0%, P(better) 0.68
+  candidates: travel 12.843, bye 12.846, ftn_drop 12.847, home_div 12.849, home_trend 12.849, ftn_int 12.850, early_body 12.851, cpoe 12.852
+stop: best remaining travel RMSE 12.843 (P(better) 0.42)
+
+Out-of-sample by season (base -> selected | Vegas closing line):
+  2022: n=271  RMSE 11.70 -> 11.89 | 11.43   SU 59.1% -> 59.5% | 66.2%
+  2023: n=272  RMSE 13.70 -> 13.61 | 13.07   SU 58.8% -> 61.4% | 68.0%
+  2024: n=272  RMSE 13.10 -> 12.89 | 12.61   SU 64.7% -> 64.3% | 71.3%
+  2025: n=272  RMSE 13.13 -> 12.94 | 12.27   SU 63.1% -> 62.7% | 65.3%
+  2026: n=121  RMSE 12.95 -> 12.79 | 12.18   SU 60.8% -> 61.7% | 65.8%
+  all: RMSE 12.932 -> 12.842 | 12.342   SU 61.4% -> 62.0% | 67.5%   P(selected beats base) 0.94
+
+Coefficients fit on all seasons: {'d0': 0.803, 'd1': 0.892, 'd2': 0.535, 'd3': 0.405, 'd4': 0.435, 'd5': 0.449, 'd6': 0.516, 'd7': 0.616, 'home_field': 1.991, 'qb_change': 0.567, 'inj_all': 0.902, 'rest_diff': 0.394}

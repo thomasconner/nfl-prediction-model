@@ -9,7 +9,7 @@ Projection rating at week w = (n*r_w + k_w*rho*r_prev)/(n + k_w), k_w = k0*max(0
 Each played game is predicted from ratings frozen after the week before it; unplayed games from
 the latest ratings.
 """
-import sys, os, json, subprocess
+import sys, os, json, subprocess, glob
 from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
@@ -40,6 +40,23 @@ NEXT = W + 1 if W < gs.week.max() else None
 tg = M.team_games(cfg)
 tg = tg[tg.season == SEASON]
 prev = M.rating(cfg, SEASON - 1, 18)
+
+# next-game add-ons (quarterback change, players ruled out, rest); see live_addons.py
+AD = None
+if os.path.exists(f'{HERE}/out/addons.json'):
+    from live_addons import Addons
+    AD = Addons(HERE, M.load()[0], M.DATA, SEASON)
+QB_NAME = {}
+for side in ('home', 'away'):
+    QB_NAME.update(dict(zip(gs[f'{side}_qb_id'], gs[f'{side}_qb_name'])))
+
+# picks already logged before kickoff are the official picks (log/<season>/, newest entry per game)
+LOG_DIR = os.environ.get('NFL_LOG', os.path.join(os.path.dirname(HERE), 'log'))
+LOGGED = {}
+for f in sorted(glob.glob(f'{LOG_DIR}/{SEASON}/week_*_picks.json') + glob.glob(f'{LOG_DIR}/{SEASON}/week_*_pregame_*.json')):
+    for e in json.load(open(f)):
+        if e['game_id'] not in LOGGED or e['logged_at'] >= LOGGED[e['game_id']]['logged_at']:
+            LOGGED[e['game_id']] = e
 teams = sorted(NICK)
 
 
@@ -75,6 +92,28 @@ def win_prob(r, home, away, neutral, w):
     return m, norm.cdf(m / sd)
 
 
+def next_game(gm, r):
+    """Next-game pick with add-ons; returns margin, home win chance and the add-on details."""
+    w = int(gm.week)
+    neutral = gm.location == 'Neutral'
+    qh, uh = AD.qb_delta(gs, gm.home_team, gm.home_qb_id, w)
+    qa, ua = AD.qb_delta(gs, gm.away_team, gm.away_qb_id, w)
+    oh, nh = AD.players_out(gm.home_team, w)
+    oa, na = AD.players_out(gm.away_team, w)
+    rest = float(gm.home_rest - gm.away_rest) if pd.notna(gm.home_rest) and pd.notna(gm.away_rest) else 0.0
+    m = AD.margin(r[gm.home_team] - r[gm.away_team], min(w - 1, 17), neutral, qh - qa, (oa or 0.0) - (oh or 0.0), rest)
+    notes = []
+    for t, q, u, d in ((gm.home_team, gm.home_qb_id, uh, qh), (gm.away_team, gm.away_qb_id, ua, qa)):
+        if d:
+            notes.append(f"{t}: {QB_NAME.get(q, q)} starting instead of {QB_NAME.get(u, u)} ({d * AD.coef.get('qb_change', 0):+.1f} pts)")
+    for t, names in ((gm.home_team, nh), (gm.away_team, na)):
+        if names:
+            notes.append(f"{t} without " + ', '.join(names))
+    extra = dict(qb_change=round(qh - qa, 2), players_out=round((oa or 0.0) - (oh or 0.0), 2), rest_diff=rest,
+                 injury_report=bool(oh is not None or oa is not None), notes=' | '.join(notes) or None)
+    return m, float(norm.cdf(m / AD.sd)), extra
+
+
 ratings, weekly = {}, []
 for w in range(0, W + 1):
     r, parts = proj_rating(w)
@@ -90,7 +129,10 @@ for w in range(0, W + 1):
     rem = gs[gs.week > w]
     exp_rem = pd.Series(0.0, index=teams)
     for _, gm in rem.iterrows():
-        _, p = win_prob(r, gm.home_team, gm.away_team, gm.location == 'Neutral', w)
+        if AD is not None and w == W and int(gm.week) == w + 1:
+            _, p, _ = next_game(gm, r)
+        else:
+            _, p = win_prob(r, gm.home_team, gm.away_team, gm.location == 'Neutral', w)
         exp_rem[gm.home_team] += p
         exp_rem[gm.away_team] += 1 - p
     proj = wins + 0.5 * ties + exp_rem
@@ -119,7 +161,21 @@ for _, gm in gs.sort_values(['week', 'gameday', 'game_id']).iterrows():
     played = pd.notna(gm.result)
     w_r = int(gm.week) - 1 if played else W
     w_r = min(w_r, W)
-    m, p = win_prob(ratings[w_r], gm.home_team, gm.away_team, gm.location == 'Neutral', w_r)
+    extra = dict(qb_change=None, players_out=None, rest_diff=None, injury_report=None, notes=None)
+    lg = LOGGED.get(gm.game_id)
+    if lg is not None and (played or lg.get('stage') == 'pregame'):
+        m, p = float(lg['model_margin_home']), float(lg['model_home_win_prob'])
+        stage = lg.get('stage') or ('tuesday' if lg.get('logged_live') else 'rebuilt')
+        extra.update({k: lg.get(k) for k in extra})
+    elif played:
+        m, p = win_prob(ratings[w_r], gm.home_team, gm.away_team, gm.location == 'Neutral', w_r)
+        stage = 'rebuilt'
+    elif AD is not None and NEXT and int(gm.week) == NEXT:
+        m, p, extra = next_game(gm, ratings[W])
+        stage = 'current'
+    else:
+        m, p = win_prob(ratings[w_r], gm.home_team, gm.away_team, gm.location == 'Neutral', w_r)
+        stage = 'projection'
     pick = gm.home_team if m >= 0 else gm.away_team
     spread = None if pd.isna(gm.spread_line) else float(gm.spread_line)
     vpick = None if spread is None or spread == 0 else (gm.home_team if spread > 0 else gm.away_team)
@@ -140,7 +196,8 @@ for _, gm in gs.sort_values(['week', 'gameday', 'game_id']).iterrows():
         final=None if not played else f'{gm.away_team} {int(gm.away_score)}, {gm.home_team} {int(gm.home_score)}',
         model_correct=mc, vegas_correct=vc,
         model_miss=None if not played else round(abs(res - m), 1),
-        vegas_miss=None if (not played or spread is None) else round(abs(res - spread), 1)))
+        vegas_miss=None if (not played or spread is None) else round(abs(res - spread), 1),
+        pick_stage=stage, **extra))
     for t, o, sgn, ha in ((gm.home_team, gm.away_team, 1, 'vs'), (gm.away_team, gm.home_team, -1, 'at')):
         if gm.location == 'Neutral':
             ha = 'vs'
@@ -159,7 +216,8 @@ for _, gm in gs.sort_values(['week', 'gameday', 'game_id']).iterrows():
             vegas_says=None if spread is None else ('Pick\'em' if spread == 0 else f'{vpick} by {abs(spread):g}'),
             result=result, margin=None if not played else ts - os_,
             model_right=None if mc is None else ('Yes' if mc == 1 else ('Push' if mc == 0.5 else 'No')),
-            vegas_right=None if vc is None else ('Yes' if vc == 1 else ('Push' if vc == 0.5 else 'No'))))
+            vegas_right=None if vc is None else ('Yes' if vc == 1 else ('Push' if vc == 0.5 else 'No')),
+            pick_stage=stage, notes=extra.get('notes')))
 G, TG = pd.DataFrame(grows), pd.DataFrame(trows)
 
 # ---------- current cards (report card logic), aligned to this file's rating ----------
