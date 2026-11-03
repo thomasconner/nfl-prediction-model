@@ -12,6 +12,7 @@ Run this after each regular season ends, once the last Tuesday update has gone o
   - The expected starting quarterbacks and each team's usual starter.
   - Rest days, roof, division game, and the model version (a hash of the code and parameters).
   - `logged_live: false` marks a row rebuilt afterwards rather than logged before the game. All of 2026 Weeks 1–8 were rebuilt: same pre-game ratings, but closing lines and actual starters.
+- **`week_NN_pregame_<time>.json` and `playoffs_<time>.json`**: the final picks, made about an hour before kickoff. These are the official picks.
 - **`after_week_NN_cards.json`**: the report cards exactly as published that week, verdicts included. Use these to check how each verdict held up in real time, not just in back-tests.
 
 Final scores, closing lines and play-by-play come from nflverse at evaluation time.
@@ -61,4 +62,5 @@ All commands run from the repo root unless noted.
 - **Season number.** Every scheduled task passes the season (`2026`). Update the weekly, Sunday and Monday/Thursday tasks to the new season.
 - **Special kickoff slots.** List the new schedule's non-standard slots from `games.csv`: Thanksgiving, Black Friday, Saturdays, Christmas, international games outside 9:30 AM Sunday, and Week 18 Saturday. Add one-time pre-kickoff tasks about an hour before each.
 - **Preseason starting point.** `weekly.py` uses last season's full-season rating automatically. Re-run `fit_prior.py` only if the retrain changed the method.
+- **Playoffs.** Set the playoff pre-kickoff task's dates for the new postseason (wild card, divisional and conference weekends) and add a one-time run for the Super Bowl.
 - **Log.** A new `log/<season>/` folder starts automatically. Leave old seasons untouched.

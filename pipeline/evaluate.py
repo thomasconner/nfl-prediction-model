@@ -19,7 +19,7 @@ data = os.environ.get('NFL_DATA', f'{work}/data')
 VEGAS_SD = 13.5  # spread to win chance (normal), the usual rule of thumb for NFL margins
 
 rows = []
-for f in sorted(glob.glob(f'{log_dir}/*/week_*_picks.json') + glob.glob(f'{log_dir}/*/week_*_pregame_*.json')):
+for f in sorted(glob.glob(f'{log_dir}/*/week_*_picks.json') + glob.glob(f'{log_dir}/*/week_*_pregame_*.json') + glob.glob(f'{log_dir}/*/playoffs_*.json')):
     rows += json.load(open(f))
 ALL = pd.DataFrame(rows)
 ALL['stage'] = ALL.get('stage', pd.Series(index=ALL.index, dtype=object))

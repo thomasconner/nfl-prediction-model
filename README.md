@@ -21,6 +21,7 @@ Built with Claude from [nflverse](https://github.com/nflverse) data. For fun, no
   - `check_log.py <pipeline_dir> <season> <log_dir> [week]` reports games of a finished week with no Tuesday or pre-kickoff pick in the log.
   - `evaluate.py <pipeline_dir> <log_dir> [season]` prints the scorecard: winners picked vs. Vegas, calibration, home-field bias, quarterback-change games.
   - `pregame.py <pipeline_dir> <season> <log_dir>` re-picks games kicking off in the next 2½ hours with the latest starters and injury report, and logs them.
+  - `playoffs.py <pipeline_dir> <season> <log_dir>` does the same for playoff games and logs them to `log/<season>/playoffs_<time>.json`.
   - `live_addons.py` holds the next-game adjustments (quarterback change, starters ruled out, rest days). The coefficients are in `out/addons.json`, chosen by `addons.py` + `cv.py` with leave-one-season-out cross-validation. Vegas is never an input.
   - `ab.py`, `ledger.py`, `fit_prior.py`, `stability.py` and `holdout.py` are the research tools used to choose and tune the rating method (`out/method.json`).
 
@@ -36,4 +37,4 @@ python3 -I pipeline/build_site.py pipeline 2026 .
 
 It then commits the new `data/` and `log/` files and pushes.
 
-About an hour before each kickoff slot (Thursday night, Sunday international, 1 PM, 4 PM and Sunday night, Monday night, plus holiday and Saturday games), another job runs `refresh.py ... --extra` and then `pregame.py`. These final picks are the official ones the model is graded on.
+About an hour before each kickoff slot (Thursday night, Sunday international, 1 PM, 4 PM and Sunday night, Monday night, plus holiday and Saturday games), another job runs `refresh.py ... --extra` and then `pregame.py`. These final picks are the official ones the model is graded on. Playoff games get the same pre-kickoff runs through the Super Bowl, using `playoffs.py`.

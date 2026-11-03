@@ -45,7 +45,7 @@ class Addons:
             sn['gsis'] = sn.pfr_player_id.map(m)
             self.snaps = sn
             inj = pd.read_parquet(p_inj)
-            self.inj = inj[(inj.game_type == 'REG') & (inj.position != 'QB')]
+            self.inj = inj[inj.position != 'QB']  # regular season and playoff reports (playoff weeks are 19-22)
 
     # ---- features ----
     def q_qb(self, pid, s, w):
