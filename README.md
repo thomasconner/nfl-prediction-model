@@ -1,9 +1,10 @@
-# NFL Report Cards
+# NFL Prediction Model
 
 **Site:** https://thomasconner.github.io/nfl-prediction-model/
 
-Is an NFL team actually good, or is its record lying? Each team is graded on every play, not just its win-loss record.
+A model that predicts the winner and margin of every NFL game. Teams are rated on every play, not on their win-loss record. Before each week it publishes a report card for every team: how good the team really is, how lucky its record is, and where its season is headed. About an hour before each kickoff it makes a final pick using the latest starters and injury report. Every pick goes into a permanent log, and the model is graded against Vegas from that log.
 
+- **Picks** give a predicted margin and win chance for each game. The ratings drive them, adjusted for quarterback changes, starters ruled out and rest days. Vegas lines are logged for comparison but never used as an input.
 - **Strength** is net EPA per play: what each snap adds on offense, minus what the defense allows. It is adjusted for opponents and shown as points per game above or below an average team.
 - **Luck** is a team's wins minus the wins a team of its strength usually gets.
 - **Projections** combine the record so far with each remaining game's win chance. A preseason starting point counts early in the season and fades out by Week 8.
