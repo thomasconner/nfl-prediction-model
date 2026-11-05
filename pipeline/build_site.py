@@ -6,7 +6,7 @@ Writes <site_dir>/index.html, data/*.json, d3.min.js (+license), og.png, .nojeky
 import sys, os, json, shutil, csv
 
 work, season, site = os.path.abspath(sys.argv[1]), int(sys.argv[2]), os.path.abspath(sys.argv[3])
-url = sys.argv[4] if len(sys.argv) > 4 else 'https://thomasconner.github.io/nfl-report-cards/'
+url = sys.argv[4] if len(sys.argv) > 4 else 'https://thomasconner.github.io/nfl-prediction-model/'
 src = f'{work}/site_src'
 os.makedirs(f'{site}/data', exist_ok=True)
 SOURCES = ['meta', 'weekly', 'games', 'team_games', 'cards', 'accuracy', 'verdicts']

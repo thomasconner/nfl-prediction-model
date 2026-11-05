@@ -1,6 +1,6 @@
 # NFL Report Cards
 
-**Site:** https://thomasconner.github.io/nfl-report-cards/
+**Site:** https://thomasconner.github.io/nfl-prediction-model/
 
 Is an NFL team actually good, or is its record lying? Each team is graded on every play, not just its win-loss record.
 
